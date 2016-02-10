@@ -41,19 +41,18 @@ initialize() {
 
   //procedure to assign parameters of the representative agent model
 parameterize() {
-decl i;
- beta=.96;
- delta=.045;//Pizer value
- Ubar=10;
+    decl i;
+    beta=.96;
+    delta=.045;//Pizer value
+    Ubar=10;
 
- sigma=1.2213;	 //Pizer value
- alpha=.3;//Nordhaus Value
+    sigma=1.2213;	 //Pizer value
+    alpha=.3;//Nordhaus Value
 
-//United Nations Projections
- gamman=.02;
- deltan=.03;	//UN Medium Growth
- //deltan=0.018; //UN High Growth
-
+    //United Nations Projections
+    gamman=.02;
+    deltan=.03;	//UN Medium Growth
+    //deltan=0.018; //UN High Growth
 
     gammao=0.00762625; //calibrated
     deltao=1.07788e-006; //calibrated
@@ -65,11 +64,9 @@ decl i;
 
     deltath2=1;
 
-
     gammaphi=0.0117432; //calibrated
     deltaphi=0.0509572; //calibrated
     phi[0]=1.30726; //calibrated
-
 
     t2x=2.98;
     t1=.9112;//Pizer Value
@@ -107,7 +104,7 @@ decl i;
 exogenousfill(sc,pricefile,assetfile) {
   decl i,ii;
 
- //Initial Values
+    //Initial Values
     CumC[]=213;
     Mb=590;
     cstate[][atm1]= 690;
@@ -117,48 +114,44 @@ exogenousfill(sc,pricefile,assetfile) {
     cstate[][stemp]=0.295;
     rho[]=1;
 
-  for(i=1;i<NP;++i) {
-    phi[i]=phi[i-1].*(1+gammaphi*(1-deltaphi)^(i));
-	Omegat[i]=Omegat[i-1].*(1+gammao*(1-deltao)^(i));
-	theta[i]=theta[i-1]*(1+gammath*(1-deltath*deltath2^i)^i);
-	}
-Omega=Omegat;//set initial Omega to trend value - bring in damages in equil()
-decl j;
-pop[0][0]=88.5*10^6;
-for(j=1;j<NG;++j)
-	pop[0][j]=pop[0][j-1]./(1+gamman);
-for(i=1;i<NP;++i)
-    {
-	pop[i][0]=pop[i-1][0].*(1+gamman*(1-deltan)^(i));
-        for(j=1;j<NG;++j)
-        pop[i][j]=pop[i-1][j-1];
+    for(i=1;i<NP;++i) {
+        phi[i]=phi[i-1].*(1+gammaphi*(1-deltaphi)^(i));
+	   Omegat[i]=Omegat[i-1].*(1+gammao*(1-deltao)^(i));
+	   theta[i]=theta[i-1]*(1+gammath*(1-deltath*deltath2^i)^i);
+	   }
+    Omega=Omegat;//set initial Omega to trend value - bring in damages in equil()
+    decl j;
+    pop[0][0]=88.5*10^6;
+    for(j=1;j<NG;++j) pop[0][j]=pop[0][j-1]./(1+gamman);
+    for(i=1;i<NP;++i) {
+	   pop[i][0]=pop[i-1][0].*(1+gamman*(1-deltan)^(i));
+       for(j=1;j<NG;++j) pop[i][j]=pop[i-1][j-1];
+       }
+    N=pop.*hcap';//N is units of effective labour supply per cohort per time period
+    L=sumr(N);  //L is effective labour supply in a time period
+    N=N./10^6; //labour supply by cohort
+    L=L./10^6; //aggregate labour supply.
+    pop=pop./10^6;
+
+    popshare=ones(NP,NG)./sumr(pop.*10^6);  //each cohort's share of the total population
+    //each agent in a particular cohort makes up popshare of the population
+    //cohort share of pop is popshare.*pop.*10^6
+    rentshare=popshare;
+    permitshare=popshare;
+    prices[equity]=1*cumprod(constant(1,NP,1));//start with a simple interest-free savings
+    //prices[15:NP-1][equity]=prices[15][equity];
+    prices[][lab]=.004;
+    prices[][res]=113.5;
+    prices[][permits]=0;
+
+    decl dbase;
+    dbase = new Database();
+    dbase.Load(assetfile);
+    assets=dbase.GetAll();
+    dbase = new Database();
+    dbase.Load(pricefile);
+    prices=dbase.GetAll();
     }
-N=pop.*hcap';//N is units of effective labour supply per cohort per time period
-L=sumr(N);  //L is effective labour supply in a time period
-N=N./10^6; //labour supply by cohort
-L=L./10^6; //aggregate labour supply.
-pop=pop./10^6;
-
-popshare=ones(NP,NG)./sumr(pop.*10^6);  //each cohort's share of the total population
-//each agent in a particular cohort makes up popshare of the population
-//cohort share of pop is popshare.*pop.*10^6
-rentshare=popshare;
-permitshare=popshare;
-prices[equity]=1*cumprod(constant(1,NP,1));//start with a simple interest-free savings
-//prices[15:NP-1][equity]=prices[15][equity];
-prices[][lab]=.004;
-prices[][res]=113.5;
-prices[][permits]=0;
-
- decl dbase;
- dbase = new Database();
- dbase.Load(assetfile);
- assets=dbase.GetAll();
- dbase = new Database();
- dbase.Load(pricefile);
- prices=dbase.GetAll();
-return 1;
-}
 
 policy(permits_issued,carbon_tax,percap,sp,firm_allocation) {
 	println("in policy ",permits_issued~carbon_tax~percap~sp~firm_allocation);
@@ -432,14 +425,10 @@ equil(file_load,file_save) {
 	prices=dbase.GetAll();
 
 	Omega=Omegat;
-
-	crit_equil=10;
-	while(crit_equil>10^(-7))	{
+    do {
 		MaxControl(200,0);
 		ror_old=prices[][equity];
-		firm_crit=7;
-		//solve extraction and production given rate of return
-		while(firm_crit>10^(-6)) {									
+		do {//solve extraction and production given rate of return
 			kold=K;
 			xold=X;
 			E=X;
@@ -474,7 +463,8 @@ equil(file_load,file_save) {
 			xold=X;
 			kold=K;
 			println("Firm Convergence crit, X, K ",firm_crit[0][0],"   ",X_converge[0][0],"   ",K_converge[0][0]);
-			}
+			} while(firm_crit>firm_toler);
+
 		print_equil=0;
 		extract_nl(&ext_euler,extstart);
 		print_equil=0;
@@ -485,25 +475,25 @@ equil(file_load,file_save) {
 		for(timet=NP-2;timet>=0;--timet)  {
 		  shareprice[timet][0]=(shareprice[timet+1][0]+dividends[timet+1])/prices[timet+1][equity];
 	 	  }//end for loop
-		agent_converge=0;
-		agent_crit=10^(-8);
-		agent_converge=agents_problem(1000);
-		while(agent_converge>0) {
-			println("Unconverged assets - recalculating");
-			assets[1:][]=0;
+		do {
      		agent_converge=agents_problem(1000);
-			}
-		adj=((sumr(assets.*pop.*10^6))./(10^12))-ones(NP,1);
-		adj[][]=spline(adj,cumsum(ones(NP,1),1),0);//locally smooth adjustment - keeps it from going pos/neg/pos
-		agent_crit=maxc(fabs(adj[][]));
-		prices[][equity]./=(ones(NP,1)+adj[][]/50);//adjust rates of return
-		savemat("xfile"~file_save~".dat",X);
-		savemat("kfile"~file_save~".dat",K);
-		savemat("assetsfile"~file_save~".dat",assets);
-		savemat("pricesfile"~file_save~".dat",prices);
-		crit_equil=meanc(fabs((prices[][equity])-(ror_old))[:NP-3][])+agent_crit; //firm crit will be small due to while loop above
-		println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",agent_converge);
-		}
+            if (agent_converge>0) {
+                println("Unconverged assets - recalculating");
+			     assets[1:][]=0;
+                }
+			} while(agent_converge>0);
+		  adj=((sumr(assets.*pop.*10^6))./(10^12))-ones(NP,1);
+		  adj[][]=spline(adj,cumsum(ones(NP,1),1),0);//locally smooth adjustment - keeps it from going pos/neg/pos
+		  agent_crit=maxc(fabs(adj[][]));
+		  prices[][equity]./=(ones(NP,1)+adj[][]/50);//adjust rates of return
+		  savemat("xfile"~file_save~".dat",X);
+		  savemat("kfile"~file_save~".dat",K);
+		  savemat("assetsfile"~file_save~".dat",assets);
+		  savemat("pricesfile"~file_save~".dat",prices);
+		  crit_equil=meanc(fabs((prices[][equity])-(ror_old))[:NP-3][])+agent_crit; //firm crit will be small due to while loop above
+		  println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",agent_converge);
+		} while (crit_equil>equil_toler);
+
 	}
 
 
@@ -679,10 +669,8 @@ polisim() {
 	println(ctax~prices[][permits]~X);
 
 	for(g=2;g<rows(quotachoices);++g)
-		for(j=0;j<rows(scchoices);++j)
-			{
-			if(g>0)
-				{
+		for(j=0;j<rows(scchoices);++j) {
+			if(g>0) {
 				for(h=0;h<rows(percapchoices);++h)
 					for(i=0;i<rows(firmchoices);++i)
 						{
@@ -699,11 +687,10 @@ polisim() {
 						fclose("l");
 						}
 				}
-			else
-				{
-//					//println("permit allocation ",quotachoices[g]," per capita indication ",percapchoices[h][0]," firm permits ",firmchoices[i][0], " and climate scenario ",scchoices[j][0]);
+			else {
+            //					//println("permit allocation ",quotachoices[g]," per capita indication ",percapchoices[h][0]," firm permits ",firmchoices[i][0], " and climate scenario ",scchoices[j][0]);
 				policy(54,0,0,48,0);
-//					//println("permit allocation and firm permits",P~Pfirm);
+            //					//println("permit allocation and firm permits",P~Pfirm);
 				logfile="simuls_"~sprint(quotachoices[g][0])~"_"~sprint(0)~"_"~sprint(0)~"_"~sprint(scchoices[j][0])~".log";
 				println("logfile is ",logfile);
 				scenario(scchoices[j][0]);
@@ -715,7 +702,6 @@ polisim() {
 				}
 			}
 		
-
 		fopen("cohorts.log","l");
 		println(cumsum(ones(NP,1),1)~pop[][0]);
 		fclose("l");

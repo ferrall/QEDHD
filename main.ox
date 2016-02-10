@@ -1,4 +1,4 @@
-#import "humdim"
+#import "humdim"     // you have to include/ to the include path for this to work
 
 main(){
     decl starttime,fintime,params,pol,sc;
@@ -12,7 +12,7 @@ main(){
     data=dbase.GetAll();
     initialize(); //set up all variables
     parameterize();//parameterize the model
-    exogenousfill(2,"pricesfile.dat","assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
+    exogenousfill(2,"data/pricesfile.dat","data/assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
     Z=2;//set level of market power in resource sector to acheive approx \$100 per ton markup
 
     println(deltam);
