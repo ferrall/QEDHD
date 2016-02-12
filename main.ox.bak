@@ -2,9 +2,11 @@
 
 main(){
     decl starttime,fintime,params,pol,sc;
-    decl ptest,over;
+    decl ptest,j,over,i;
     starttime=timer();
-	//Not used??    pstart=48;
+    NG=60;  //number of generations
+    NP=220*(NG/60);//number of periods
+    pstart=48;
     decl dbase = new Database();
     dbase.LoadObs("edata.txt",5,60,0,1,1,1);
     data=dbase.GetAll();

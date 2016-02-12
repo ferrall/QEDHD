@@ -1,37 +1,22 @@
 #ifndef HDINCLUDED
-	#define HDINCLUDED
-	#include <oxstd.h> 
-	#include <oxfloat.h>
-	#import  <database>
-	#import  <maximize>
-	#include <oxprob.h>
-	#include <oxdraw.h>
-	#import  <solvenle>
-	#import  <maxsqp>
+#define HDINCLUDED
+#include <oxstd.h> //include the Ox standard library header
+#include <oxfloat.h>
+#import  <database>
+#import  <maximize>
+#include <oxprob.h>
+#include <oxdraw.h>
+#import  <solvenle>	//include non-linear solver routines
+#import  <maxsqp>	//include constrained optimization routines
 
 //ENUMERATIONS
 
 //1. Price vector enumeration
-enum{equity,lab,res,permits,NPrices}
-
+enum{equity,lab,res,permits}
 // Climate states
-enum{atm1,atm2,atm3,Ntrans}
-enum{stemp=Ntrans,otemp,OGHG,NClimate}	  //climate module
-
+enum{atm1,atm2,atm3,stemp,otemp,OGHG}	  //climate module
 //Data set
-enum{yeardat,gdpdat,emitdat,energydat,atmco2dat,NDatafiles}
-
-//CF Dimensions of the problem
-struct D {
-	const static decl
-		A = 60,  // years of agent life
-		P = 220, // periods
-		G = 60   // generations
-		;
-		
-	}
-	
-const decl CarbPrice = 50;
+enum{yeardat,gdpdat,emitdat,energydat,atmco2dat}
 
 //Global functions
 
