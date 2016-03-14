@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #import <humdim>
 
 //ENUMERATIONS
@@ -60,20 +61,25 @@ extern decl newassets,euler;
 extern decl limit_low,limit_high;
 extern decl print_equil;
 extern decl NP,NG;
+=======
+#import "include/humdim"    
+>>>>>>> 1081fb99290266119d3b1429be4d7d97320c62ef
 
 main(){
     decl starttime,fintime,params,pol,sc;
-    decl ptest,j,over,i;
+    decl ptest,over;
     starttime=timer();
-    NG=60;  //number of generations
-    NP=220*(NG/60);//number of periods
-    pstart=48;
+	//Not used??    pstart=48;
     decl dbase = new Database();
     dbase.LoadObs("edata.txt",5,60,0,1,1,1);
     data=dbase.GetAll();
     initialize(); //set up all variables
     parameterize();//parameterize the model
+<<<<<<< HEAD
     exogenousfill(2,"./data/pricesfile.dat","./data/assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
+=======
+    exogenousfill(2,ddir+"pricesfile.dat",ddir+"assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
+>>>>>>> 1081fb99290266119d3b1429be4d7d97320c62ef
     Z=2;//set level of market power in resource sector to acheive approx \$100 per ton markup
 
 	calibration();
