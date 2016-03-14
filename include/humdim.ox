@@ -10,7 +10,7 @@ initialize() {
  income= permit_transfers= ctax=CumC= rho= GDP = Omegat=U= K= X= P= zeros(D::P,1);
 
   
-  deltam=new matrix[Ntrans][Ntrams];
+  deltam=new matrix[Ntrans][Ntrans];
 
   N= pop=  assets=  cons=  utils=  newassets=
   popshare=  //share of population represented by each agent in each cohort
@@ -59,10 +59,9 @@ parameterize() {
     b1=-0.004500;
     b2=0.003500;
     d0=1;
-
 	
     deltam[atm1][atm1]=exp(log(.66616)/10);
-    deltam[atm2][amt1]=1-deltam[atm1][atm1];
+    deltam[atm2][atm1]=1-deltam[atm1][atm1];
     deltam[atm2][atm2]=exp(log(.60897)/10);
     deltam[atm2][atm1]=.27607/(.27607+.11496)*(1-deltam[atm2][atm2]);
     deltam[atm2][atm3]=.11496/(.27607+.11496)*(1-deltam[atm2][atm2]);	
@@ -190,7 +189,7 @@ datacheck(j,NPP) {
 calibprint() {
 	decl i;
 	for(i=1;i<D::P;++i)
-		println(i,"  ",Omegat[i],"   ",Omega[i],"   ",cstate[i][],"     ",E[i],"     ",CumC[i],"     ",mextcost[i],"     ",E[i]*phi[i],"       ",L[i],"      ",double(sumr(pop[i][])),"      ",pop[i][0],"   ",K[i],"   ",U[i],"    ",GDP[i],"    ",cons[i][0],"   ",sumr(cons[i][].*pop[i][0]*(1E-6)))[0][0],"   ",phi[i][0],"   ",theta[i][0],"   ",prices[i][0],"   ",prices[i][1],"   ",prices[i][2],"   ",prices[i][3],"   ",P[i][0],"   ",Pfirm[i][0],"   ",ctax[i][0],"   ",rentinc[i][0],"   ",permitinc[i],"   ",dividends[i],"   ",income[i],"   ",permit_transfers[i]);
+		println(i,"  ",Omegat[i],"   ",Omega[i],"   ",cstate[i][],"     ",E[i],"     ",CumC[i],"     ",mextcost[i],"     ",E[i]*phi[i],"       ",L[i],"      ",double(sumr(pop[i][])),"      ",pop[i][0],"   ",K[i],"   ",U[i],"    ",GDP[i],"    ",cons[i][0],"   ",sumr(cons[i][].*pop[i][0]*(1E-6))[0][0],"   ",phi[i][0],"   ",theta[i][0],"   ",prices[i][0],"   ",prices[i][1],"   ",prices[i][2],"   ",prices[i][3],"   ",P[i][0],"   ",Pfirm[i][0],"   ",ctax[i][0],"   ",rentinc[i][0],"   ",permitinc[i],"   ",dividends[i],"   ",income[i],"   ",permit_transfers[i]);
 		}
 
  //evaluate system of agent's euler equations
@@ -468,7 +467,7 @@ equil(file_load,file_save) {
 		  adj=((sumr(assets.*pop)*(1E6))./(1E12))-ones(D::P,1);
 		  adj[][]=spline(adj,cumsum(ones(D::P,1),1),0);//locally smooth adjustment - keeps it from going pos/neg/pos
 		  agent_crit=maxc(fabs(adj[][]));
-		  prices[][equity]./=(1+adj[][]/50);  ?? Same as $50 //adjust rates of return 
+		  prices[][equity]./=(1+adj[][]/50);  // Same as $50 // adjust rates of return 
 		  savemat(ddir+"xfile"~file_save~".dat",X);
 		  savemat(ddir+"kfile"~file_save~".dat",K);
 		  savemat(ddir+"assetsfile"~file_save~".dat",assets);
@@ -648,7 +647,7 @@ polisim() {
 	policy(5.4,0,0,48,0);
 	scenario(2);
 	equil();
-	savemat(ddir+"shadow_+"sprint(CarbPrice)+".dat",X);
+	savemat(ddir+"shadow_"+sprint(CarbPrice)+".dat",X);
 
 	println(ctax~prices[][permits]~X);
 

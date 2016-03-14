@@ -23,7 +23,7 @@ enum{yeardat,gdpdat,emitdat,energydat,atmco2dat,NDatafiles}
 
 //CF Dimensions of the problem
 struct D {
-	const static decl
+	static decl
 		A = 60,  // years of agent life
 		P = 220, // periods
 		G = 60   // generations
