@@ -7,3 +7,7 @@
 #include <oxdraw.h>
 #import <solvenle>	//include non-linear solver routines
 #import <maxsqp>	//include constrained optimization routines
+
+initialize();
+parameterize();
+exogenousfill(sc,pricefile,assetfile);

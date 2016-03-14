@@ -1,5 +1,66 @@
 ﻿#include "humdim.oxh"
 
+//ENUMERATIONS
+
+//1. Price vector enumeration
+enum{equity,lab,res,permits}
+// Climate states
+enum{atm1,atm2,atm3,stemp,otemp,OGHG}	  //climate module
+//Data set
+enum{yeardat,gdpdat,emitdat,energydat,atmco2dat}
+
+
+//Global Variables
+
+
+//Storage objects
+decl data;
+decl prices;  
+
+//State Variables
+decl K,N,R,L,pop,popshare;
+decl cstate;
+decl CumC,mextcost;
+decl assets,endow,hcap;
+decl Omega,Omegat;
+decl E,Mb,F,Ts;//environmental variables
+decl timet;  //to pass time period
+
+
+//Policy variables
+decl ctax,pstart,P,Pfirm;
+decl rentinc,permitinc,dividends,shareprice,firm_permit_value;
+decl rentshare,permitshare;
+
+
+//Economic aggregates
+decl U,GDP,cons,utils,income,permit_transfers;
+decl C,X;     //aggregate consumption and investment
+decl resmarkup;//use this for calibration
+decl Z; //number of firms in energy sector
+
+//model parameters
+decl rho,beta,sigma,delta,Ubar; //utility function parameters
+decl alpha,theta;
+decl gammaa,gamman;  //exogenous growth rates
+decl deltaa,deltan;//growth decay rates
+decl gammaphi,deltaphi;//growth decay rates
+decl gammao,deltao;//growth decay rates
+decl gammath,deltath,deltath2;//growth decay rates
+decl phi;
+decl t1,t2,t3,t4,deltam,t2x;
+decl d0,b1,b2;
+decl xi;
+
+
+//solution objects
+
+decl assetspass,pricespass,dividendspass,assetveclast;
+decl newassets,euler;
+decl limit_low,limit_high;
+decl print_equil=0;
+decl NP,NG;
+
 //procedure to set up variables
 initialize() {
   xi=new matrix[3];
@@ -592,7 +653,7 @@ moment(params_sent,retval,score,hess) {
 	}
 
 calibration() {
-	params=gammao|deltao|Omega[0][0]|gammath|deltath|theta[0][0];
+	decl params=gammao|deltao|Omega[0][0]|gammath|deltath|theta[0][0];
 	decl params_phi=gammaphi|deltaphi|phi[0][0];
 	limit_low=(params|params_phi).*.9;
 	limit_low[3][0]=gammath*1.1;//gammath is negative
@@ -640,7 +701,7 @@ caloutput() {
 
 	policy(54,0,0,48,0);
 	scenario(2);
-	equil();
+	//equil();
 	fopen("calib_rev2.log","l");
 	calibprint();
 	fclose("l");
@@ -654,7 +715,7 @@ caloutput() {
 //Policy Simulations
 polisim() {	
 
-	decl logfile,g,h;
+	decl logfile,g,h,i,j;
 
 	////policy(permits_issued,carbon_tax,percap,sp,firm_allocation)
 	decl quotachoices=<540;54;500>;
@@ -673,7 +734,7 @@ polisim() {
 
 	policy(5.4,0,0,48,0);
 	scenario(2);
-	equil();
+	//equil();
 	savemat("shadow_50.dat",X);
 
 	println(ctax~prices[][permits]~X);
