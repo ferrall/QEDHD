@@ -353,7 +353,7 @@ extract_nl(sysval,sent_vals) {
 new_assetsnl(sysval,startassets) {
 	//enum{equity,lab,res,permits}
 	decl lifespan=endow[0][0];
-	decl assetstemp=(startassets~assetspass[][1:3])|zeros(1,4);//first period endowment and death period zero added
+	decl assetstemp=((endow[0][1]|startassets)~assetspass[][1:3])|zeros(1,4);//first period endowment and death period zero added
 	decl pricestemp=pricespass|pricespass[rows(pricespass)-1][];
 	decl divstemp=(dividendspass|0).*assetstemp[][0];//dividends per share times shareholdings
 
