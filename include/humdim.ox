@@ -453,7 +453,7 @@ equil(file_load,file_save) {
 		permitinc=(P!=Pfirm).*(X-Pfirm).*prices[][permits]*(1E12);
 		firm_permit_value=-(Pfirm).*prices[][permits];
 		//update share prices given dividends and rates of return
-		shareprice[][]=1000;//the price of one share in the last period in dollars
+		shareprice=ones(D::P,1)*1000;//the price of one share in the last period in dollars
 		for(timet=D::P-2;timet>=0;--timet)  {
 		  shareprice[timet][0]=(shareprice[timet+1][0]+dividends[timet+1])/prices[timet+1][equity];
 	 	  }//end for loop
