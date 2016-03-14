@@ -297,7 +297,7 @@ new_assetsnl(sysval,startassets) {
 	sysval[0]=(consumption[0:lifespan-2][]).^(-sigma)-beta./pricestemp[0:lifespan-2][equity].*(pricestemp[1:lifespan-1][equity]+dividendspass[1:lifespan-1][]).*(consumption[1:lifespan-1][]).^(-sigma);
 	sysval[0]*=10;//scale it for solution tightness
 	//println("relevant measures - consumption, income, investment, dividends, euler",consumption~(sumr(pricestemp.*assetstemp))~(pricestemp[][equity].*lag0(assetstemp[][0],-1))~divstemp[][0]~(0|sysval[0]|0));
-	}
+}
 						   
 //equity distribution iteration
 agents_problem(itermax)	{

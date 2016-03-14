@@ -1,4 +1,4 @@
-﻿#include "humdim.oxh"
+#include "humdim.oxh"
 
 //ENUMERATIONS
 
@@ -158,7 +158,9 @@ decl i;
     //load earnings profile from file profile.dta
     decl db,hcbase;
     db = new Database();
-    db.LoadDta("profile.dta",1,1,1);
+    if(db.LoadDta("./data/profile.dta",1,1,1)==FALSE){
+		oxrunerror("Could not read: ./data/profile.dta", 0);	
+	}
     hcbase=db.GetAll();
     hcap=hcbase[][1];
 	
@@ -205,20 +207,24 @@ popshare=ones(NP,NG)./sumr(pop.*10^6);  //each cohort's share of the total popul
 //cohort share of pop is popshare.*pop.*10^6
 rentshare=popshare;
 permitshare=popshare;
-prices[equity]=1*cumprod(constant(1,NP,1));//start with a simple interest-free savings
+prices[][equity]=constant(1,NP,1);//start with a simple interest-free savings
 //prices[15:NP-1][equity]=prices[15][equity];
 prices[][lab]=.004;
 prices[][res]=113.5;
 prices[][permits]=0;
 
- decl dbase;
- dbase = new Database();
- dbase.Load(assetfile);
- assets=dbase.GetAll();
- dbase = new Database();
- dbase.Load(pricefile);
- prices=dbase.GetAll();
-return 1;
+	decl dbase;
+	dbase = new Database();
+	if(dbase.Load(assetfile)==FALSE){
+		oxrunerror("Could not read: "~assetfile, 0);	
+	}
+	assets=dbase.GetAll();
+	dbase = new Database();
+	if(dbase.Load(pricefile)==FALSE){
+		oxrunerror("Could not read: "~pricefile, 0);	
+	}
+	prices=dbase.GetAll();
+	return 1;
 }
 
 policy(permits_issued,carbon_tax,percap,sp,firm_allocation) {
@@ -229,7 +235,9 @@ policy(permits_issued,carbon_tax,percap,sp,firm_allocation) {
 	if(permits_issued==50) {
 		//println("load 50 dollar shadow price file");
 		decl dbase = new Database();
-		dbase.Load("shadow_50.dat");
+		if(dbase.Load("./data/shadow_50.dat")){
+			oxrunerror("Could not read: ./data/shadow_50.dat", 0);	
+		}
 		P[sp:NP-1]=dbase.GetAll()[sp:NP-1];
 		}	
 
@@ -345,15 +353,15 @@ extract_nl(sysval,sent_vals) {
 new_assetsnl(sysval,startassets) {
 	//enum{equity,lab,res,permits}
 	decl lifespan=endow[0][0];
-	decl assetstemp=((endow[0][1]|startassets)~assetspass[][1:3])|zeros(1,4);//first period endowment and death period zero added
+	decl assetstemp=(startassets~assetspass[][1:3])|zeros(1,4);//first period endowment and death period zero added
 	decl pricestemp=pricespass|pricespass[rows(pricespass)-1][];
 	decl divstemp=(dividendspass|0).*assetstemp[][0];//dividends per share times shareholdings
 
 	decl consumption=sumr(pricestemp.*assetstemp)-pricestemp[][equity].*lag0(assetstemp[][0],-1)+divstemp[][0];
-	sysval[0]=(consumption[0:lifespan-2][]).^(-sigma)-beta./pricestemp[0:lifespan-2][equity].*(pricestemp[1:lifespan-1][equity]+dividendspass[1:lifespan-1]).*(consumption[1:lifespan-1][]).^(-sigma);
+	sysval[0]=(consumption[0:lifespan-2][]).^(-sigma)-beta./pricestemp[0:lifespan-2][equity].*(pricestemp[1:lifespan-1][equity]+dividendspass[1:lifespan-1][]).*(consumption[1:lifespan-1][]).^(-sigma);
 	sysval[0]*=10;//scale it for solution tightness
 	//println("relevant measures - consumption, income, investment, dividends, euler",consumption~(sumr(pricestemp.*assetstemp))~(pricestemp[][equity].*lag0(assetstemp[][0],-1))~divstemp[][0]~(0|sysval[0]|0));
-	}
+}
 						
 //equity distribution iteration
 agents_problem(itermax)	{
@@ -409,11 +417,11 @@ agents_problem(itermax)	{
 			}
 		else  {  //CF: changed to else from "if(lifespan>1)"
 			endow=lifespan~assetspass[0][];//row vector of all three endowments
-			assetvec=vec(assetspass[1:lifespan-1][0]);//vector of capital holdings, in partial shares
+			assetvec=vec(assetspass[0:lifespan-1][0]);//vector of capital holdings, in partial shares
 			test=assetvec;
 			MaxControl(1000,0);
 			euler=assetvec;
-			converge+=(SolveNLE(new_assetsnl,&assetvec,-1));
+			converge+=(SolveNLE(new_assetsnl,&assetvec));
 			new_assetsnl(&euler,assetvec);
 			assetspass[][0]=((endow[0][1]|assetvec));
 			consumption=sumr(pricespass.*assetspass)-pricespass[][equity].*lag0(assetspass[][0],-1)+(dividendspass.*assetspass[][0]);
@@ -440,7 +448,7 @@ agents_problem(itermax)	{
 	return converge;
 	}
 
-//évolution du modèle climatique étant donné les émissions.
+// Evolution of the climate model given emissions.
 newclimate(emissions)	{
 	//use global NPx6 matrix of climate values and receive a NPx1 vector of emissions levels
 	//fill a new NPx6 matrix of updated climate values.
@@ -477,19 +485,27 @@ equil(file_load,file_save) {
 	decl inv_euler=K;
 
 	dbase = new Database();
-	dbase.Load("Kfile"~file_load~".dat");
+	if(dbase.Load("./data/Kfile"~file_load~".dat")==FALSE){
+		oxrunerror("Could not read: ./data/Kfile"~file_load~".dat", 0);	
+	}
 	K=dbase.GetAll();
 
 	dbase = new Database();
-	dbase.Load("Xfile"~file_load~".dat");
+	if(dbase.Load("./data/Xfile"~file_load~".dat")==FALSE){
+		oxrunerror("Could not read: ./data/Xfile"~file_load~".dat", 0);	
+	}
 	X=dbase.GetAll();
 
 	dbase = new Database();
-	dbase.Load("assetsfile"~file_load~".dat");
+	if(dbase.Load("./data/assetsfile"~file_load~".dat")==FALSE){
+		oxrunerror("Could not read: ./data/assetsfile"~file_load~".dat", 0);	
+	}
 	assets=dbase.GetAll();
 
 	dbase = new Database();
-	dbase.Load("pricesfile"~file_load~".dat");
+	if(dbase.Load("./data/pricesfile"~file_load~".dat")==FALSE){
+		oxrunerror("Could not read: ./data/pricesfile"~file_load~".dat", 0);	
+	}
 	prices=dbase.GetAll();
 
 	Omega=Omegat;
@@ -558,10 +574,18 @@ equil(file_load,file_save) {
 		adj[][]=spline(adj,cumsum(ones(NP,1),1),0);//locally smooth adjustment - keeps it from going pos/neg/pos
 		agent_crit=maxc(fabs(adj[][]));
 		prices[][equity]./=(ones(NP,1)+adj[][]/50);//adjust rates of return
-		savemat("xfile"~file_save~".dat",X);
-		savemat("kfile"~file_save~".dat",K);
-		savemat("assetsfile"~file_save~".dat",assets);
-		savemat("pricesfile"~file_save~".dat",prices);
+		if(savemat("./data/xfile"~file_save~".dat",X)==0){
+			oxrunerror("Could not write to: ./data/xfile.dat", 0);	
+		}
+		if(savemat("./data/kfile"~file_save~".dat",K)==0){
+			oxrunerror("Could not write to: ./data/kfile.dat", 0);	
+		}
+		if(savemat("./data/assetsfile"~file_save~".dat",assets)==0){
+			oxrunerror("Could not write to: ./data/xfile.dat", 0);	
+		}
+		if(savemat("./data/pricesfile"~file_save~".dat",prices)==0){
+			oxrunerror("Could not write to: ./data/xfile.dat", 0);	
+		}
 		crit_equil=meanc(fabs((prices[][equity])-(ror_old))[:NP-3][])+agent_crit; //firm crit will be small due to while loop above
 		println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",agent_converge);
 		}
@@ -583,7 +607,7 @@ parset(params) {
 	deltaphi=params[7][0];
 	phi[0][0]=params[8][0];
 
-	exogenousfill(2,"pricesfile.dat","assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
+	exogenousfill(2,"./data/pricesfile.dat","./data/assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
 
 	}
 
@@ -701,14 +725,22 @@ caloutput() {
 
 	policy(54,0,0,48,0);
 	scenario(2);
-	//equil();
+	equil("","");
 	fopen("calib_rev2.log","l");
 	calibprint();
 	fclose("l");
-	savemat("xfile.dat",X);
-	savemat("kfile.dat",K);
-	savemat("assetsfile.dat",assets);
-	savemat("pricesfile.dat",prices);
+	if(savemat("./data/xfile.dat",X)==0){
+		oxrunerror("Could not write to: ./data/xfile.dat", 0);	
+	}
+	if(savemat("./data/kfile.dat",K)==0){
+		oxrunerror("Could not write to: ./data/kfile.dat", 0);	
+	}
+	if(savemat("./data/assetsfile.dat",assets)==0){
+		oxrunerror("Could not write to: ./data/assetsfile.dat", 0);	
+	}
+	if(savemat("./data/pricesfile.dat",prices)==0){
+		oxrunerror("Could not write to: ./data/pricesfile.dat", 0);	
+	}
 
 	}
 
@@ -728,14 +760,18 @@ polisim() {
 	policy(54,0.0485,0,48,0);
 	scenario(2);
 	equil("2","2_50");
-	savemat("shadow_50.dat",X);
+	if(savemat("./data/shadow_50.dat",X)==0){
+		oxrunerror("Could not write to: ./data/xfile.dat", 0);	
+	}
 
 	println(ctax~prices[][permits]~X);
 
 	policy(5.4,0,0,48,0);
 	scenario(2);
-	//equil();
-	savemat("shadow_50.dat",X);
+	equil("","");
+	if(savemat("./data/shadow_50.dat",X)==0){
+		oxrunerror("Could not write to: ./data/xfile.dat", 0);	
+	}
 
 	println(ctax~prices[][permits]~X);
 

@@ -10,4 +10,6 @@
 
 initialize();
 parameterize();
+calibration();
+caloutput();
 exogenousfill(sc,pricefile,assetfile);
