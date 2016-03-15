@@ -265,8 +265,8 @@ new_assetsnl(sysval,startassets) {
 	decl
 	  utility  = sumr(pricestemp.*assetstemp)[:lifespan-1];  //income
 	  utility -=  pricestemp[:lifespan-1][equity].*lag0(assetstemp[:lifespan-1][equity],-1)+divstemp[:lifespan-1];   //savings
-	  utility = pow(utility,-sigma);
-	println(sumr(pricestemp.*assetstemp)~utility);
+	  utility = pow(setbounds(utility,.0001,+.Inf),-sigma);
+
 	sysval[0]   = -beta./pricestemp[:lifespan-2][equity];
 	sysval[0] .*= (pricestemp[1:lifespan-1][equity]+dividendspass[1:lifespan-1]);
 	sysval[0] .*= utility[1:];
@@ -300,14 +300,14 @@ agents_problem(itermax)	{
 		fstart=timer();
 		//CF Removed if() statement
 		firstper = max(born,0);
-		startlife = -firstper;
+		startlife = max(-born,0);
 		lifespan =  D::G-startlife;
 		maxper  = firstper+lifespan-1;
 		lastper = min(maxper,D::P-1);
 		topind = startlife+lifespan-1;
 		np_age= D::A;
-		pricespass   = masterp[firstper:maxper][];
-		dividendspass=dividends[firstper:maxper];//pass on relevant time period dividends per share
+		pricespass   = masterp[firstper:lastper][];
+		dividendspass=dividends[firstper:lastper];//pass on relevant time period dividends per share
 		assetspass=  (diagonal(assets[firstper:D::P-1][startlife:D::G-1])')
 						~hcap[startlife:D::G-1]
 						~diagonal(rentshare[firstper:D::P-1][startlife:D::G-1])'
@@ -327,7 +327,7 @@ agents_problem(itermax)	{
 			dividendspass|=  constant(dividends[D::P-1],D::G-np_age,1);//pass on relevant time period dividends per share with fixed last period dividend through time
 			}				
 		println("Born in period ",born," with lifespan ",lifespan," age at D::P=",np_age," padded with ",D::G-np_age," zeros.");
-		println("assetpass ",assetspass,"price pass ",pricespass,"div ", dividendspass);
+		//		println("assetpass ",assetspass,"price pass ",pricespass,"div ", dividendspass);
 		//assets are equity, human capital, res rent allocation, and permit rent allocation
 		consumption=sumr(pricespass.*assetspass);
 		assetvec=vec(assetspass[0][0]);
@@ -418,7 +418,6 @@ equil(file_load,file_save) {
 	dbase = new Database();
 	dbase.Load(ddir+"assetsfile"~file_load~".dat");
 	assets=dbase.GetAll();
-	println("assets",assets);
 	delete dbase;  //CF Andrew's code did not clean up.
 
 	dbase = new Database();
