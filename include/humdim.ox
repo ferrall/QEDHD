@@ -258,100 +258,115 @@ extract_nl(sysval,sent_vals) {
  //evaluate system of agent's euler equations
 new_assetsnl(sysval,startassets) {
 	//enum{equity,lab,res,permits}
-	decl lifespan=endow[0][0];
-	decl assetstemp=((endow[0][1]|startassets)~assetspass[][1:3])|zeros(1,4);//first period endowment and death period zero added
+	decl assetstemp=((endow[equity]|startassets)~assetspass[][lab:permits])|0.0;//first period endowment and death period zero added
 	decl pricestemp=pricespass|pricespass[rows(pricespass)-1][];
-	decl divstemp=(dividendspass|0).*assetstemp[][0];//dividends per share times shareholdings
+	decl divstemp=(dividendspass|0).*assetstemp[][equity];//dividends per share times shareholdings
+	
+	decl
+	  utility  = sumr(pricestemp.*assetstemp)[:lifespan-1];  //income
+	  utility -=  pricestemp[:lifespan-1][equity].*lag0(assetstemp[:lifespan-1][equity],-1)+divstemp[:lifespan-1];   //savings
+	  utility = pow(utility,-sigma);
 
-	decl consumption=sumr(pricestemp.*assetstemp)-pricestemp[][equity].*lag0(assetstemp[][0],-1)+divstemp[][0];
-	sysval[0]=(consumption[0:lifespan-2][]).^(-sigma)-beta./pricestemp[0:lifespan-2][equity].*(pricestemp[1:lifespan-1][equity]+dividendspass[1:lifespan-1]).*(consumption[1:lifespan-1][]).^(-sigma);
+	sysval[0]   = -beta./pricestemp[:lifespan-2][equity];
+	sysval[0] .*= (pricestemp[1:lifespan-1][equity]+dividendspass[1:lifespan-1]);
+	sysval[0] .*= utility[1:];
+	sysval[0]  += utility[:lifespan-2]; 
+	
 	sysval[0]*=10;//scale it for solution tightness
 	//println("relevant measures - consumption, income, investment, dividends, euler",consumption~(sumr(pricestemp.*assetstemp))~(pricestemp[][equity].*lag0(assetstemp[][0],-1))~divstemp[][0]~(0|sysval[0]|0));
+	//println(startassets~sysval[0]);	
+	return !isnan(sysval[0]);  //CF this was not here before.	
 	}
 						
 //equity distribution iteration
 agents_problem(itermax)	{
-	decl fstart;
-	decl born,lifespan,startlife,converge,euler;
+	decl fstart,firstper,maxper,lastper,masterp,topind;
+	decl born,startlife,Nconverge,euler; 	//CF removed decl of lifespan,
 	decl storevec,assetvec,assetfill,consumption,consfill,utilityfill;
-	decl test,np_age,sp_ext,step;
-	converge=0;
+	decl np_age,sp_ext,step;
+	Nconverge=0;
 	//println("Beginning agent's problem");
-	sp_ext=new matrix[D::G][1];//extra NG periods of share prices, holding last period ROR and dividend constant
-	sp_ext[0][0]=shareprice[D::P-1]*prices[D::P-1][equity]-dividends[D::P-1];
+	sp_ext=new matrix[D::G];//extra NG periods of share prices, holding last period ROR and dividend constant
+	sp_ext[0]=shareprice[D::P-1]*prices[D::P-1][equity]-dividends[D::P-1];
 	for(step=1;step<D::G;++step)  {
-	  sp_ext[step][0]=sp_ext[step-1]*prices[D::P-1][equity]-dividends[D::P-1];
+	  sp_ext[step]=sp_ext[step-1]*prices[D::P-1][equity]-dividends[D::P-1];
  	  }//end for loop													
 
 	//println(shareprice|sp_ext);
 
+	masterp = shareprice~(1E6*prices[][lab])~rentinc~permitinc;
+	
 	for(born=-D::G+1;born<D::P;++born) {
 		fstart=timer();
-		lifespan=D::G;
-		startlife=0;
+		//CF Removed if() statement
+		firstper = max(born,0);
+		startlife = -firstper;
+		lifespan =  D::G-startlife;
+		maxper  = firstper+lifespan-1;
+		lastper = min(maxper,D::P-1);
+		topind = startlife+lifespan-1;
 		np_age= D::A;
-		if(born<0) {
-			startlife=-born;
-			lifespan=D::G-startlife;
-			}
-		if(born<=D::P-D::G)	{
-			//println("  ");
-			assetspass=(diagonal(assets[max(born,0):D::P-1][startlife:D::G-1])')~hcap[startlife:startlife+lifespan-1][0]~diagonal(rentshare[max(born,0):D::P-1][startlife:D::G-1])'~diagonal(permitshare[max(born,0):D::P-1][startlife:D::G-1])';
-			//prices paid on assets are equity price+per share dividend, wage rate, total res rents, total permit rents
-			pricespass=(shareprice[max(born,0):max(born,0)+lifespan-1][0])~(prices[max(born,0):max(born,0)+lifespan-1][lab]*(1E6))~(rentinc[max(born,0):max(born,0)+lifespan-1][0])~permitinc[max(born,0):max(born,0)+lifespan-1][0];			
-			dividendspass=dividends[max(born,0):max(born,0)+lifespan-1][0];//pass on relevant time period dividends per share
-			}
-		if(born==D::P-D::G-2) storevec=assetspass;
+		pricespass   = masterp[firstper:maxper][];
+		dividendspass=dividends[firstper:maxper];//pass on relevant time period dividends per share
+		assetspass=  (diagonal(assets[firstper:D::P-1][startlife:D::G-1])')
+						~hcap[startlife:D::G-1]
+						~diagonal(rentshare[firstper:D::P-1][startlife:D::G-1])'
+						~diagonal(permitshare[firstper:D::P-1][startlife:D::G-1])';		
+//		if(born<=D::P-D::G)	{			//prices paid on assets are equity price+per share dividend, wage rate, total res rents, total permit rents
+			if(born==D::P-D::G-2) storevec=assetspass[][equity]/1000;   //CF original code stored all columns??
+//			}
 		if(born>D::P-D::G){
-			startlife=0;
-			lifespan=D::G;
 			np_age=D::P-born;
-			assetspass=((diagonal(assets[max(born,0):D::P-1][startlife:D::G-1])')|zeros(D::G-np_age,1))~hcap[startlife:startlife+lifespan-1][0]~((diagonal(rentshare[max(born,0):D::P-1][startlife:np_age-1])')|(ones(NG-np_age,1).*rentshare[D::P-1][np_age-1]))~((diagonal(permitshare[max(born,0):D::P-1][startlife:np_age-1])')|(ones(D::G-np_age,1).*permitshare[D::P-1][np_age-1]));
-			assetspass[][0]=storevec./1000;//try these as starting values - should be okay.
-			pricespass=(shareprice[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][0]|(sp_ext[0:D::G-np_age-1][0]))~((prices[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][lab]*(1E6))|(prices[D::P-1][lab]*(1E6) .*ones(D::G-np_age,1)))~(rentinc[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][0]|(rentinc[D::P-1][0].*ones(D::G-np_age,1)))~(permitinc[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][0]|(permitinc[D::P-1][0].*ones(D::G-np_age,1)));			
-			dividendspass=dividends[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][0]|(dividends[D::P-1][0].*ones(D::G-np_age,1));//pass on relevant time period dividends per share with fixed last period dividend through time
+			assetspass |= 0~hcap[]~rentshare[D::P-1][np_age-1]~permitshare[D::P-1];
+//			assetspass=diagonal(assets[firstper:D::P-1][startlife:D::G-1]' |zeros(D::G-np_age,1))
+//			          ~hcap[startlife:topind]
+//					  ~(diagonal(rentshare[firstper:D::P-1][startlife:np_age-1])'  |constant(rentshare[D::P-1][np_age-1],D::G-np_age,1)))
+//					  ~(diagonal(permitshare[firstper:D::P-1][startlife:np_age-1])'|cosntant(permitshare[D::P-1],D::G-np_age,1) ) ;
+			assetspass[][equity]=storevec;		//try these as starting values - should be okay.
+			pricespass   |=  sp_ext[:D::G-np_age-1]~reshape(masterp[D::P-1][1:],D::G-np_age,NPrices-1);
+			dividendspass|=  constant(dividends[D::P-1],D::G-np_age,1);//pass on relevant time period dividends per share with fixed last period dividend through time
 			}				
-		//println("Born in period ",born," with lifespan ",lifespan);
-		//println("age at D::P=",np_age," padded with ",D::G-np_age,"zeros.");
+		println("Born in period ",born," with lifespan ",lifespan," age at D::P=",np_age," padded with ",D::G-np_age," zeros.");
+		println("assetpass ",assetspass,"price pass ",pricespass,"div ", dividendspass);
 		//assets are equity, human capital, res rent allocation, and permit rent allocation
 		consumption=sumr(pricespass.*assetspass);
 		assetvec=vec(assetspass[0][0]);
 		if(lifespan==1) {
-			cons[max(born,0)][startlife]=consumption[0][0];
-			utils[max(born,0)][startlife]=consumption[0][0].^(1-sigma)./(1-sigma)+Ubar;
+			cons[firstper][startlife]=consumption[0];
+			utils[firstper][startlife]=cons[firstper][startlife]^(1-sigma)/(1-sigma)+Ubar;
 			//println("Consumption ",(cumsum(ones(rows(consumption),1),1)-1)~(sumr(pricespass.*assetspass))~consumption);
 			}
 		else  {  //CF: changed to else from "if(lifespan>1)"
-			endow=lifespan~assetspass[0][];//row vector of all three endowments
-			assetvec=vec(assetspass[1:lifespan-1][0]);//vector of capital holdings, in partial shares
-			test=assetvec;
+			//  endow=lifespan~assetspass[0][];//row vector of all three endowments
+			endow=assetspass[0][];	//CF: removed sending lifespan in endow.
+			// CF:vec() redundant?			assetvec=vec(assetspass[1:lifespan-1][equity]);//vector of capital holdings, in partial shares
+			assetvec=assetspass[1:lifespan-1][equity];  //CF replacment for line above
 			MaxControl(1000,0);
-			euler=assetvec;
-			converge+=(SolveNLE(new_assetsnl,&assetvec,-1));
+			//CF:not needed?			euler=assetvec;
+			Nconverge += SolveNLE(new_assetsnl,&assetvec);
 			new_assetsnl(&euler,assetvec);
-			assetspass[][0]=((endow[0][1]|assetvec));
-			consumption=sumr(pricespass.*assetspass)-pricespass[][equity].*lag0(assetspass[][0],-1)+(dividendspass.*assetspass[][0]);
-			assetfill=assets[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][startlife:];
-			consfill=cons[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][startlife:];
-			assetfill=setdiagonal(assetfill,endow[0][1]|submat(assetvec,0,np_age-2,0,0));
+			assetspass[][equity]=((endow[equity]|assetvec));
+			consumption=sumr(pricespass.*assetspass)-pricespass[][equity].*lag0(assetspass[][equity],-1)+(dividendspass.*assetspass[][equity]);
+			assetfill=assets[firstper:lastper][startlife:];
+			consfill=   cons[firstper:lastper][startlife:];
+			assetfill=setdiagonal(assetfill,endow[0]|submat(assetvec,0,np_age-2,0,0));
 			consfill=setdiagonal(consfill,submat(consumption,0,np_age-1,0,0));
 
-			assets[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][startlife:]=assetfill;
-			cons[max(born,0):min(max(born,0)+lifespan-1,D::P-1)][startlife:]=consfill;
+			assets[firstper:lastper][startlife:]=assetfill;
+			cons[firstper:lastper][startlife:]=consfill;
 
 		if(born>=0) {
 			U[born]=sumc((consumption.^(1-sigma)./(1-sigma)+Ubar).*.95.^(cumsum(ones(rows(consumption),1),1)-1));
 			permit_transfers[born][0]=sumr(pricespass[0][3].*assetspass[0][3]);
 			income[born][0]=sumr(pricespass[0][].*assetspass[0][])+(dividendspass[0][].*assetspass[0][0]);
 			}
-		//println("  Convergence flag from agent's problem:",converge);
 		}
 	}//end of for loop over birth cohorts
 
 	utils=cons.^(1-sigma)./(1-sigma)+Ubar;
 
-	println("Sum of Convergence flags from agent's problem (must be zero):",converge);
-	return converge;
+	println("Sum of Convergence flags from agent's problem (must be zero):",Nconverge);
+	return Nconverge;
 	}
 
 //évolution du modèle climatique étant donné les émissions.
@@ -393,18 +408,22 @@ equil(file_load,file_save) {
 	dbase = new Database();
 	dbase.Load(ddir+"Kfile"~file_load~".dat");
 	K=dbase.GetAll();
+	delete dbase;  //CF Andrew's code did not clean up.
 
 	dbase = new Database();
 	dbase.Load(ddir+"Xfile"~file_load~".dat");
 	X=dbase.GetAll();
+	delete dbase;  //CF Andrew's code did not clean up.
 
 	dbase = new Database();
 	dbase.Load(ddir+"assetsfile"~file_load~".dat");
 	assets=dbase.GetAll();
+	delete dbase;  //CF Andrew's code did not clean up.
 
 	dbase = new Database();
 	dbase.Load(ddir+"pricesfile"~file_load~".dat");
 	prices=dbase.GetAll();
+	delete dbase;  //CF Andrew's code did not clean up.
 
 	Omega=Omegat;
     do {

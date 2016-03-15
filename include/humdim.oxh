@@ -66,6 +66,7 @@ decl data, params, prices;
 decl K,N,R,L,pop,popshare;
 decl cstate;
 decl CumC,mextcost;
+decl lifespan; //CF ADDED this to avoid putting it in endow
 decl assets,endow,hcap;
 decl Omega,Omegat;
 decl E,Mb,F,Ts;//environmental variables
