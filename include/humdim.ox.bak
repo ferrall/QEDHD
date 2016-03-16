@@ -326,7 +326,7 @@ agents_problem(itermax)	{
 			pricespass   |=  sp_ext[:D::G-np_age-1]~reshape(masterp[D::P-1][1:],D::G-np_age,NPrices-1);
 			dividendspass|=  constant(dividends[D::P-1],D::G-np_age,1);//pass on relevant time period dividends per share with fixed last period dividend through time
 			}				
-		println("Born in period ",born," with lifespan ",lifespan," age at D::P=",np_age," padded with ",D::G-np_age," zeros.");
+		println("Born in period ",born," with lifespan ",lifespan," age at D::P=",np_age," padded with ",D::G-np_age," zeros. asset,price lengths",rows(pricespass)," ",rows(assetspass));
 		//		println("assetpass ",assetspass,"price pass ",pricespass,"div ", dividendspass);
 		//assets are equity, human capital, res rent allocation, and permit rent allocation
 		consumption=sumr(pricespass.*assetspass);

@@ -44,7 +44,7 @@ datacheck(j,NPP);
 calibprint();
 invest_nl(sysval,capital);
 extract_nl(sysval,sent_vals);
-new_assetsnl(sysval,startassets);
+agent_euler(sysval,startassets);
 agents_problem(itermax);
 newclimate(emissions);
 equil(file_load="2",file_save="2_50");
@@ -80,13 +80,13 @@ decl rentshare,permitshare;
 
 
 //Economic aggregates
-decl U,GDP,cons,utils,income,permit_transfers;
+decl U,GDP,cons,income,permit_transfers; //CF: took out utils
 decl C,X;     //aggregate consumption and investment
 decl resmarkup;//use this for calibration
 decl Z; //number of firms in energy sector
 
 //model parameters
-decl rho,beta,sigma,delta,Ubar; //utility function parameters
+decl rho,beta,sigma,delta,Ubar,sig1inv; //utility function parameters
 decl alpha,theta;
 decl gammaa,gamman;  //exogenous growth rates
 decl deltaa,deltan;//growth decay rates
