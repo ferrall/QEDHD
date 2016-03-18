@@ -51,7 +51,7 @@ agents_problem(itermax)	{
  	  }//end for loop													
 
 	masterp = shareprice~(1E6*prices[][lab])~rentinc~permitinc;  //CF Avoids doing this repeatedly inside the loop
-	
+	MaxControl(itermax,0);  //CF itermax was not being passed.
 	for(born=-D::G+1;born<D::P;++born) {
 		fstart=timer();
 		if (!imod(born,10)) print(".");
@@ -86,9 +86,8 @@ agents_problem(itermax)	{
 		else  {  //CF: changed to else from "if(lifespan>1)"
 			endow=assetspass[0][];	//CF: removed sending lifespan in endow.
 			assetvec=assetspass[1:lifespan-1][equity];  //CF replacment for line above
-			MaxControl(itermax,20);
 			Nconverge += SolveNLE(agent_euler,&assetvec);
-			new_assetsnl(&euler,assetvec);
+			agent_euler(&euler,assetvec);
 			assetspass[][equity]=((endow[equity]|assetvec));
 			consumption=sumr(pricespass.*assetspass)-pricespass[][equity].*lag0(assetspass[][equity],-1)+(dividendspass.*assetspass[][equity]);
 			assetfill=assets[firstper:premax][startlife:];

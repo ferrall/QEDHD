@@ -31,7 +31,7 @@ agent_euler(sysval,startassets) {
 	
 	sysval[0]*=10;//scale it for solution tightness
 	//println("relevant measures - consumption, income, investment, dividends, euler",consumption~(sumr(pricestemp.*assetstemp))~(pricestemp[][equity].*lag0(assetstemp[][0],-1))~divstemp[][0]~(0|sysval[0]|0));
-	//println(startassets~sysval[0]);	
+	//println(startassets~sysval[0]);
 	return !isnan(sysval[0]);  //CF this was not here before.	
 	}
 						
@@ -51,7 +51,7 @@ agents_problem(itermax)	{
  	  }//end for loop													
 
 	masterp = shareprice~(1E6*prices[][lab])~rentinc~permitinc;  //CF Avoids doing this repeatedly inside the loop
-	
+	MaxControl(itermax,0);  //CF itermax was not being passed.
 	for(born=-D::G+1;born<D::P;++born) {
 		fstart=timer();
 		if (!imod(born,10)) print(".");
@@ -86,7 +86,6 @@ agents_problem(itermax)	{
 		else  {  //CF: changed to else from "if(lifespan>1)"
 			endow=assetspass[0][];	//CF: removed sending lifespan in endow.
 			assetvec=assetspass[1:lifespan-1][equity];  //CF replacment for line above
-			MaxControl(itermax,20);
 			Nconverge += SolveNLE(agent_euler,&assetvec);
 			agent_euler(&euler,assetvec);
 			assetspass[][equity]=((endow[equity]|assetvec));

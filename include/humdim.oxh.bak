@@ -90,7 +90,7 @@ decl Z; //number of firms in energy sector
 //model parameters
 decl rho,beta,sigma,delta,Ubar,sig1inv; //utility function parameters
 decl alpha,theta;
-decl gammaa,gamman,rplus1;  //exogenous growth rates
+decl gammaa,gamman;  //exogenous growth rates
 decl deltaa,deltan;//growth decay rates
 decl gammaphi,deltaphi;//growth decay rates
 decl gammao,deltao;//growth decay rates

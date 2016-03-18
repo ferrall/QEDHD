@@ -24,6 +24,7 @@ initialize() {
 parameterize() {
     decl i;
     beta=.96;
+	rplus1 = 1.005;
     delta=.045;//Pizer value
     Ubar=10;
 
@@ -74,11 +75,9 @@ parameterize() {
     xi[2]=4;
 
     //load earnings profile from file profile.dta
-    decl db,hcbase;
-    db = new Database();
-    db.LoadDta(ddir+"profile.dta",1,1,1);
-    hcbase=db.GetAll();
-    hcap=hcbase[][1];
+	hcap = loadmat(indir+"profile.dta");
+	if (isint(hcap)) oxwarning("file load failed "+indir+"profiles.dta");
+    hcap=hcap[][1];
 	
     }
 
@@ -125,13 +124,8 @@ exogenousfill(sc,pricefile,assetfile) {
     prices[][res]=113.5;
     prices[][permits]=0;
 
-    decl dbase;
-    dbase = new Database();
-    dbase.Load(assetfile);
-    assets=dbase.GetAll();
-    dbase = new Database();
-    dbase.Load(pricefile);
-    prices=dbase.GetAll();
+    assets = loadmat(assetfile);
+	prices = loadmat(pricefile);
     }
 
 scenario(scene) {
@@ -180,7 +174,7 @@ parset(params) {
 	deltaphi=params[7];
 	phi[0][0]=params[8];
 
-	exogenousfill(2,"pricesfile.dat","assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
+	exogenousfill(2,indir+"pricesfile.dat",indir+"assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
 
 	}
 

@@ -6,13 +6,11 @@ policy(permits_issued,carbon_tax,percap,sp,firm_allocation) {
 	println("in policy ",permits_issued~carbon_tax~percap~sp~firm_allocation);
 
 	P[:sp-1]= CarbPrice;//set initial permits to be non-binding
-	P[sp: ] = permits_issued;
-	if(permits_issued==CarbPrice) {
+	if(permits_issued==CarbPrice) 
 		//println("load dollar shadow price file");
-		decl dbase = new Database();
-		dbase.Load(ddir+"shadow_"+sprint(CarbPrice)+".dat");
-		P[sp:]=dbase.GetAll()[sp:];
-		}	
+		P[sp:] = loadmat(indir+"shadow_"+sprint(CarbPrice)+".dat")[sp:];
+	else
+		P[sp: ] = permits_issued;
 
 	if(percap==1)
 		P[sp:]=P[sp:]./sumr(pop[sp]).*sumr(pop[sp:]);  //per capita permits
@@ -50,36 +48,25 @@ equil(file_load,file_save) {
 	decl extstart,extchoice,capstart,capchoice;
 	decl extcost,extrevenue;
 	decl mpk,mpl,mpr;
-	decl dbase;
 	decl mcost;
 	decl K_converge=0;
 	decl X_converge=0;
 
 	//begin loop over asset rate of return/shareholder discount factor.
-	K=19/1.005*cumprod(constant(1.005,D::P,1));//initial guess of capital stock increases at the rate of discount
-	X=2*cumprod(constant(1.005,D::P,1));//initial guess of capital stock increases at the rate of discount
+	decl disc = rplus1.^range(0,D::P-1)';  //Modified by CF 
+	K=19/rplus1*disc;					//initial guess of capital stock increases at the rate of discount
+	X=2*disc;							//initial guess of capital stock increases at the rate of discount
 	decl ext_euler=X;
 	decl inv_euler=K;
 
-	dbase = new Database();
-	dbase.Load(ddir+"Kfile"~file_load~".dat");
-	K=dbase.GetAll();
-	delete dbase;  //CF Andrew's code did not clean up.
+// CF:  COMMENTED OUT THESE FILES TO AVOID POSSIBLE FAILURES
+//	K = loadmat(indir+"Kfile"~file_load~".dat");
+//
+//	X=loadmat(indir+"Xfile"~file_load~".dat");
 
-	dbase = new Database();
-	dbase.Load(ddir+"Xfile"~file_load~".dat");
-	X=dbase.GetAll();
-	delete dbase;  //CF Andrew's code did not clean up.
+	assets=loadmat(indir+"assetsfile"~file_load~".dat");
 
-	dbase = new Database();
-	dbase.Load(ddir+"assetsfile"~file_load~".dat");
-	assets=dbase.GetAll();
-	delete dbase;  //CF Andrew's code did not clean up.
-
-	dbase = new Database();
-	dbase.Load(ddir+"pricesfile"~file_load~".dat");
-	prices=dbase.GetAll();
-	delete dbase;  //CF Andrew's code did not clean up.
+	prices=loadmat(indir+"pricesfile"~file_load~".dat");
 
 	Omega=Omegat;
     do {
@@ -133,20 +120,20 @@ equil(file_load,file_save) {
 		  shareprice[timet][0]=(shareprice[timet+1][0]+dividends[timet+1])/prices[timet+1][equity];
 	 	  }//end for loop
 		do {
+			assets[1:][]=0;
      		agent_converge=agents_problem(1000);
             if (agent_converge>0) {
                 println("Unconverged assets - recalculating");
-			     assets[1:][]=0;
                 }
 			} while(agent_converge>0);
 		  adj=((sumr(assets.*pop)*(1E6))./(1E12))-ones(D::P,1);
 		  adj[][]=spline(adj,cumsum(ones(D::P,1),1),0);//locally smooth adjustment - keeps it from going pos/neg/pos
 		  agent_crit=maxc(fabs(adj[][]));
 		  prices[][equity]./=(1+adj[][]/50);  // Same as $50 // adjust rates of return 
-		  savemat(ddir+"xfile"~file_save~".dat",X);
-		  savemat(ddir+"kfile"~file_save~".dat",K);
-		  savemat(ddir+"assetsfile"~file_save~".dat",assets);
-		  savemat(ddir+"pricesfile"~file_save~".dat",prices);
+		  savemat(outdir+"xfile"~file_save~".dat",X);
+		  savemat(outdir+"kfile"~file_save~".dat",K);
+		  savemat(outdir+"assetsfile"~file_save~".dat",assets);
+		  savemat(outdir+"pricesfile"~file_save~".dat",prices);
 		  crit_equil=meanc(fabs((prices[][equity])-(ror_old))[:D::P-3][])+agent_crit; //firm crit will be small due to while loop above
 		  println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",agent_converge);
 		} while (crit_equil>equil_toler);
@@ -170,7 +157,7 @@ calibration() {
 
 	MaxSQP(moment,&params,&err_val, 0, 1,0,0, limit_low[0:5][],limit_high[0:5][]);
 	//
-	////savemat("ddir+paramsfile.dat",params);
+	////savemat("outdir+paramsfile.dat",params);
 
 	params=params|params_phi;
 
@@ -206,10 +193,10 @@ caloutput() {
 	fopen("calib_rev2.log","l");
 	calibprint();
 	fclose("l");
-	savemat(ddir+"xfile.dat",X);
-	savemat(ddir+"kfile.dat",K);
-	savemat(ddir+"assetsfile.dat",assets);
-	savemat(ddir+"pricesfile.dat",prices);
+	savemat(outdir+"xfile.dat",X);
+	savemat(outdir+"kfile.dat",K);
+	savemat(outdir+"assetsfile.dat",assets);
+	savemat(outdir+"pricesfile.dat",prices);
 
 	}
 
@@ -229,7 +216,7 @@ polisim() {
 	policy(54,0.0485,0,48,0);
 	scenario(2);
 	equil();   //"2","2_50"
-	savemat(ddir+"shadow_"+sprint(CarbPrice)+".dat",X);
+	savemat(outdir+"shadow_"+sprint(CarbPrice)+".dat",X);
 
 	println(ctax~prices[][permits]~X);
 
@@ -237,7 +224,7 @@ polisim() {
 	policy(5.4,0,0,48,0);
 	scenario(2);
 	equil();
-	savemat(ddir+"shadow_"+sprint(CarbPrice)+".dat",X);
+	savemat(outdir+"shadow_"+sprint(CarbPrice)+".dat",X);
 
 	println(ctax~prices[][permits]~X);
 

@@ -10,7 +10,7 @@ main(){
     data=dbase.GetAll();
     initialize(); //set up all variables
     parameterize();//parameterize the model
-    exogenousfill(2,ddir+"pricesfile.dat",ddir+"assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
+    exogenousfill(2,indir+"pricesfile.dat",indir+"assetsfile.dat"); //fill vectors of exogenous state variables and policy parameters
     Z=2;//set level of market power in resource sector to acheive approx \$100 per ton markup
 
 	calibration();
