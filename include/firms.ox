@@ -25,32 +25,44 @@ invest_nl(sysval,capital) {
 	if(print_equil==1)
 		println((0|euler)~(dividends)~capchoice~mpk~X);
 	sysval[0]=(euler|kt);
+	return !isnan(sysval[0]);
 	}
 
+Ecosts(E,T) {
+	return C1m *( xi[0]*E+  C6K*xi[1]/(xi[2]+1)*( ((T+E)/C6K).^(xi[2]+1)-(T/C6K).^(xi[2]+1)) );
+	}
+
+Mcosts(ET) {
+	return C1m*(xi[0]+xi[1]*(ET/C6K).^xi[2]);
+	}
+	
  //evaluate system of agent's euler equations
 extract_nl(sysval,sent_vals) {
 	decl i,mpr,revenue;
 	decl sent=shape(sent_vals,D::P,2);
 	decl extraction=exp(sent[][0]);			//constrain to be positive
 	decl Cumtemp=cumsum(lag0(extraction,1),1);
-	decl Cum_eps=cumsum(lag0(extraction+(1E-3|zeros(D::P-1,1)),1),1);
+	decl Cum_eps=cumsum(lag0(extraction+(C1m|zeros(D::P-1,1)),1),1);
 					  
-	decl costs=(1E-3)*xi[0]*extraction+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((Cumtemp+extraction)/6000).^(xi[2]+1)-((Cumtemp)/6000).^(xi[2]+1));
 	//calculate the change in extraction costs for a small increase in extraction
-	decl costs_eps=(1E-3)*xi[0]*extraction+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((Cum_eps+extraction)/6000).^(xi[2]+1)-((Cum_eps)/6000).^(xi[2]+1));
+	decl costs= Ecosts(extraction,Cumtemp); 	//CF:  (1E-3)*xi[0]*extraction+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((Cumtemp+extraction)/6000).^(xi[2]+1)-((Cumtemp)/6000).^(xi[2]+1));
+	decl costs_eps=	Ecosts(extraction,Cum_eps);	// CF (1E-3)*xi[0]*extraction+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((Cum_eps+extraction)/6000).^(xi[2]+1)-((Cum_eps)/6000).^(xi[2]+1));
 
-	decl costinc=reversec(cumsum(reversec(costs_eps-costs),ones(D::P,1)*beta./reversec(prices[][equity])))./1E-3;
+	decl costinc=reversec(cumsum(reversec(costs_eps-costs),ones(D::P,1)*beta./reversec(prices[][equity])))./ C1m;
 
 	decl opp_cost=costinc;
 	//opp_cost is the current value of all future cost increases caused by a one unit change in extraction in that period
 
-	decl marg_rev=(theta.*Omega.*K.^alpha.*L.^(1-alpha-theta).*(phi.*extraction).^(theta)./extraction)+1/Z*extraction.*(theta.*(theta-1).*Omega.*K.^alpha.*L.^(1-alpha-theta).*(phi.*extraction).^(theta)./(extraction.^2));//mkt power - prices are endogenous
+	decl marg_rev=(theta.*Omega.*K.^alpha.*L.^(1-alpha-theta) .* (phi.*extraction).^(theta)./extraction) + 1/Z*extraction.*(theta.*(theta-1).*Omega.*K.^alpha.*L.^(1-alpha-theta).*(phi.*extraction).^(theta)./(extraction.^2));//mkt power - prices are endogenous
 	marg_rev+=sent[][1]-ctax;
-	mextcost=(1E-3)*(xi[0]+xi[1].*((Cumtemp[][0]+extraction)/6000).^xi[2]);//marginal extraction cost
-
+	
+	
+	mextcost = Mcosts(Cumtemp+extraction); //	mextcost=C1m*(xi[0]+xi[1].*((Cumtemp[][0]+extraction)/6000).^xi[2]);//marginal extraction cost
+	
 	decl euler=marg_rev-mextcost-1/Z*opp_cost;
 
 	decl kt=(extraction.>P).*(extraction-P).^2+(extraction.<P).*sent[][1].^2+(sent[][1].>0).*sent[][1].^2;
+
 	prices[][permits]=-sent[][1];
 
 	mpr=theta.*Omega.*K.^(alpha).*L.^(1-alpha-theta).*(phi.*X).^(theta)./X;
@@ -61,4 +73,5 @@ extract_nl(sysval,sent_vals) {
 	sysval[0]=euler|kt;
 	if(print_equil==1)
 		println("resource sector",extraction~prices[][res]~P~prices[][permits]~rentinc);
+	return !isnan(sysval[0]);
 	}

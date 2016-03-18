@@ -31,7 +31,7 @@ struct D {
 		
 	}
 	
-const decl CarbPrice = 50;
+const decl CarbPrice = 50, C6K = 6000, C1m = 1E-3;
 
 //Global functions
 
