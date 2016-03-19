@@ -38,7 +38,7 @@ agent_euler(sysval,startassets) {
 
 //equity distribution iteration
 agents_problem(itermax)	{
-	decl fstart,firstper,maxper,masterp,topind,premax,padmax;
+	decl fstart,firstper,maxper,masterp,topind,premax,padmax,curconv;
 	decl born,startlife,Nconverge,euler; 	//CF removed decl of lifespan,
 	decl storevec,assetvec,assetfill,consumption,consfill,utilityfill;
 	decl np_age,sp_ext,step;
@@ -86,8 +86,9 @@ agents_problem(itermax)	{
 		else  {  //CF: changed to else from "if(lifespan>1)"
 			endow=assetspass[0][];	//CF: removed sending lifespan in endow.
 			assetvec=assetspass[1:lifespan-1][equity];  //CF replacment for line above
-			Nconverge += SolveNLE(agent_euler,&assetvec);
+			curconv = SolveNLE(agent_euler,&assetvec)>0;
 			agent_euler(&euler,assetvec);
+			Nconverge += isnan(euler);
 			assetspass[][equity]=((endow[equity]|assetvec));
 			consumption=sumr(pricespass.*assetspass)-pricespass[][equity].*lag0(assetspass[][equity],-1)+(dividendspass.*assetspass[][equity]);
 			assetfill=assets[firstper:premax][startlife:];
@@ -108,6 +109,6 @@ agents_problem(itermax)	{
 
 //	utils = Utility(cons);
 
-	println("Sum of Convergence flags from agent's problem (must be zero):",Nconverge);
+//	println("Sum of Convergence flags from agent's problem (must be zero):",Nconverge);
 	return Nconverge;
 	}

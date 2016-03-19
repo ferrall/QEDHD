@@ -40,104 +40,85 @@ newclimate(emissions)	{
 		}
 	}
 
+FirmEuler() {
+	decl kold,xold,Kconv, Xconv,firm_crit, exstart, extstart, capstart, capchoice, extchoice;	
+	extstart=shape(log(X),2*D::P,1);
+	capstart=shape(K[1:],2*(D::P-1),1);//capital and shadow values
+
+	Kconv = Xconv = FALSE;
+	do {//solve extraction and production given rate of return
+		kold=K;			xold=X;			E=X;
+		newclimate(E);		//send sequence of emissions to temp routine
+			//update climate damages
+		Omega = Omegat./(d0+cstate[][stemp].*(b1 + b2*cstate[][stemp]));  //CF: simplified
+
+		if (!Xconv) extchoice = extstart;
+		Xconv = !SolveNLE(extract_nl,&extchoice,-1);			//println("Calculated Res Ext, given K with convergence crit ", SolveNLE(extract_nl,&extstart,-1));		
+		X   = exp(extchoice[:D::P-1]);
+		
+		CumC=cumsum(lag0(X,1),1);
+
+//		extrevenue=(theta.*Omega.*K.^alpha.*L.^(1-alpha-theta).*(phi.*X).^(theta));
+//		extcost = (1E-3)*xi[0]*X+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((CumC+X)/6000).^(xi[2]+1)-((CumC)/6000).^(xi[2]+1));
+
+		if (!Kconv) capchoice = capstart;
+		Kconv=!SolveNLE(invest_nl,&capchoice,-1);	//println("Calculated K, given res ext with convergence crit ",K_converge=SolveNLE(invest_nl,&capstart,-1));
+		K[1:] = capchoice[:D::P-2] ;
+
+		prices[][permits] = -extchoice[D::P : ];
+		firm_crit = norm( (X|K)- (xold|kold),2);  				//CF almost same criterion firm_crit=meanc(meanr(((K~X)-(kold~xold))).^2); //mean square deviation
+		if (firm_crit<firm_toler) println("Firm Converged"); 	//Convergence?, ",,"   ",X_converge,"   ",K_converge);
+		} while(firm_crit>firm_toler);
+	}
 
 //main equilibrium procedure
 equil(file_load,file_save) {
-	decl crit_equil,agent_crit,firm_crit,agent_converge;
-	decl kold,xold,adj,ror_old;
-	decl extstart,extchoice,capstart,capchoice;
-	decl extcost,extrevenue;
+	decl crit_equil,agent_crit;
+	decl adj,Pold;
 	decl mpk,mpl,mpr;
 	decl mcost;
-	decl K_converge, X_converge;
-
-	//begin loop over asset rate of return/shareholder discount factor.
+	decl Aconv;
 	decl disc = rplus1.^range(0,D::P-1)';  //Modified by CF 
-	K=19/rplus1*disc;					//initial guess of capital stock increases at the rate of discount
-	X=2*disc;							//initial guess of capital stock increases at the rate of discount
-	decl ext_euler=X;
-	decl inv_euler=K;
 
-// CF:  COMMENTED OUT THESE FILES TO AVOID POSSIBLE FAILURES
-//	K = loadmat(indir+"Kfile"~file_load~".dat");
-//
-//	X=loadmat(indir+"Xfile"~file_load~".dat");
+	K = 19/rplus1*disc;					//initial guess of capital stock increases at the rate of discount
+	X = 2*disc;							//initial guess of capital stock increases at the rate of discount
+
+	// CF:  COMMENTED OUT THESE FILES TO AVOID POSSIBLE FAILURES
+	//	K = loadmat(indir+"Kfile"~file_load~".dat");
+	//	X=loadmat(indir+"Xfile"~file_load~".dat");
 
 	assets=loadmat(indir+"assetsfile"~file_load~".dat");
-
 	prices=loadmat(indir+"pricesfile"~file_load~".dat");
 
 	Omega=Omegat;
-    do {
-		MaxControl(200,5);
-		ror_old=prices[][equity];
-		do {//solve extraction and production given rate of return
-			kold=K;
-			xold=X;
-			E=X;
-			newclimate(E);//send sequence of emissions to temp routine
-			//update climate damages
-			Omega=Omegat./(constant(d0,D::P,1).*(ones(D::P,1)+b1*cstate[][stemp]+b2*cstate[][stemp].^2));
-			extstart=log(X)|zeros(D::P,1);
-			//println("Calculated Res Ext, given K with convergence crit ", SolveNLE(extract_nl,&extstart,-1));
-			println("Starting X");
-			X_converge=SolveNLE(extract_nl,&extstart,-1);
-			print_equil=0;
-			extract_nl(&ext_euler,extstart);
-			if (X_converge) println("ext",ext_euler);
-			print_equil=0;
-			extchoice=shape(extstart,D::P,2);
-			X=exp(extchoice[][0]);
-			CumC=cumsum(lag0(X,1),1);
-			extrevenue=(theta.*Omega.*K.^alpha.*L.^(1-alpha-theta).*(phi.*X).^(theta));
-			extcost=(1E-3)*xi[0]*X+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((CumC+X)/6000).^(xi[2]+1)-((CumC)/6000).^(xi[2]+1));
-
-			capstart=(K[1:D::P-1][])|zeros(D::P-1,1);//capital and shadow values
-			//println("Calculated K, given res ext with convergence crit ",K_converge=SolveNLE(invest_nl,&capstart,-1));
-			println("Starting K");
-			K_converge=SolveNLE(invest_nl,&capstart,-1);
-			print_equil=0;
-			invest_nl(&inv_euler,capstart);
-			if (K_converge) println("inv ",inv_euler');
-			print_equil=0;
-			capchoice=shape(capstart,D::P-1,2);
-			K=(K[0][0]|(capchoice[][0]));
-		
-			//update omega
-			//println("Updating climate given res ext");
-			prices[][permits]=-extchoice[][1];
-			firm_crit = norm(X-xold,2)+ norm(K-kold,2);  //CF almost same criterion
-//			firm_crit=meanc(meanr(((K~X)-(kold~xold))).^2); //mean square deviation
-//CF:redundant			xold=X;
-//						kold=K;
-			println("Firm Convergence crit, X, K ",firm_crit,"   ",X_converge,"   ",K_converge);
-			} while(firm_crit>firm_toler);
-
-		print_equil=0;
-		extract_nl(&ext_euler,extstart);
-		print_equil=0;
-		permitinc=(P!=Pfirm).*(X-Pfirm).*prices[][permits]*(1E12);
-		firm_permit_value=-(Pfirm).*prices[][permits];
+	print_equil=0;
+    do {	// loop over asset rate of return/shareholder discount factor.
+		MaxControl(200,0);
+		Pold=prices[][equity];
+		FirmEuler();
+		permitinc	     = (P!=Pfirm).*(X-Pfirm).*prices[][permits]*(1E12);  //CF:  Should !=  be .!= ????
+		firm_permit_value= -(Pfirm).*prices[][permits];
 		//update share prices given dividends and rates of return
 		shareprice=constant(1000,D::P,1);	//the price of one share in the last period in dollars
-		for(timet=D::P-2;timet>=0;--timet)  {
-		  shareprice[timet][0]=(shareprice[timet+1][0]+dividends[timet+1])/prices[timet+1][equity];
-	 	  }//end for loop
+		for(timet=D::P-2;timet>=0;--timet)  
+		  shareprice[timet]=(shareprice[timet+1]+dividends[timet+1])/prices[timet+1][equity];
+
 		do {
 			assets[1:][]=0;
-     		agent_converge=agents_problem(1000);
-            if (agent_converge>0)  println("Unconverged assets - recalculating");
-			} while(agent_converge>0);
-		  adj= 1E-6 * sumr(assets.*pop) - 1;  //CF: simplified
-		  adj[][]=spline(adj,range(1,D::P)',0);//locally smooth adjustment - keeps it from going pos/neg/pos
-		  agent_crit=maxc(fabs(adj));
-		  prices[][equity]./=(1+adj/50);  // Same as $50 // adjust rates of return 
-		  savemat(outdir+"xfile"~file_save~".dat",X);
-		  savemat(outdir+"kfile"~file_save~".dat",K);
-		  savemat(outdir+"assetsfile"~file_save~".dat",assets);
-		  savemat(outdir+"pricesfile"~file_save~".dat",prices);
-		  crit_equil=meanc(fabs((prices[][equity])-(ror_old))[:D::P-3][])+agent_crit; //firm crit will be small due to while loop above
-		  println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",agent_converge);
+     		Aconv = !agents_problem(1000);
+            println( Aconv ? "" : "Restart");
+			} while(!Aconv);
+		adj =spline( 1E-6 * sumr(assets.*pop) - 1 ,range(1,D::P)',0); //CF: simplified //locally smooth adjustment - keeps it from going pos/neg/pos
+		agent_crit=norm(adj,2); 		//CF:  make criteria consisitent agent_crit=maxc(fabs(adj));
+		prices[][equity] ./= (1+adj/50);  // Same as $50 // adjust rates of return 
+/*
+		savemat(outdir+"xfile"~file_save~".dat",X);
+		savemat(outdir+"kfile"~file_save~".dat",K);
+		savemat(outdir+"assetsfile"~file_save~".dat",assets);
+		savemat(outdir+"pricesfile"~file_save~".dat",prices);
+*/
+		crit_equil=norm((prices[][equity]-Pold)[:D::P-3],2)+agent_crit; //firm crit will be small due to while loop above
+		println("equil: ",crit_equil); //,"%c",{"old","new"},Pold~prices[][equity]);				// CF: println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",`onverge);
 		} while (crit_equil>equil_toler);
 
 	}

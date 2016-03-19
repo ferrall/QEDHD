@@ -56,7 +56,7 @@ caloutput();
 polisim();
 
 //Global Variables
-const decl firm_toler = 1E-6, equil_toler = 1E-7,
+const decl firm_toler = 1E-5, equil_toler = 1E-5,  //CF changed from -6, -7
 			indir = "input\\",
 			outdir = "output\\";	
 
