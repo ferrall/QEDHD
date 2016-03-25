@@ -18,7 +18,6 @@ policy(permits_issued,carbon_tax,percap,sp,firm_allocation) {
 	ctax[]=0;//the carbon tax rate is zero for early periods
 	ctax[sp:]=carbon_tax;//set carbon tax for policy period
 	Pfirm=P.*firm_allocation;
-
 	}
 
 
@@ -92,34 +91,36 @@ equil(file_load,file_save) {
 
 	Omega=Omegat;
 	print_equil=0;
+	shareprice= zeros(D::P,1);	//the price of one share in the last period in dollars
     do {	// loop over asset rate of return/shareholder discount factor.
 		MaxControl(200,0);
 		Pold=prices[][equity];
 		FirmEuler();
-		permitinc	     = (P!=Pfirm).*(X-Pfirm).*prices[][permits]*(1E12);  //CF:  Should !=  be .!= ????
+		//		permitinc	     = (P!=Pfirm).*(X-Pfirm).*prices[][permits]*(1E12);  //CF:  Should !=  be .!= ????
+		permitinc	     = (P .!= Pfirm).*(X-Pfirm).*prices[][permits]*(1E12);  //CF:  Should !=  be .!= ????
 		firm_permit_value= -(Pfirm).*prices[][permits];
 		//update share prices given dividends and rates of return
-		shareprice=constant(1000,D::P,1);	//the price of one share in the last period in dollars
+		shareprice[D::P-1]=1000;  //the price of one share in the last period in dollars
 		for(timet=D::P-2;timet>=0;--timet)  
 		  shareprice[timet]=(shareprice[timet+1]+dividends[timet+1])/prices[timet+1][equity];
-
 		do {
 			assets[1:][]=0;
      		Aconv = !agents_problem(1000);
-            println( Aconv ? "" : "Restart");
+            // println( Aconv ? "" : "Restart");
 			} while(!Aconv);
 		adj =spline( 1E-6 * sumr(assets.*pop) - 1 ,range(1,D::P)',0); //CF: simplified //locally smooth adjustment - keeps it from going pos/neg/pos
 		agent_crit=norm(adj,2); 		//CF:  make criteria consisitent agent_crit=maxc(fabs(adj));
-		prices[][equity] ./= (1+adj/50);  // Same as $50 // adjust rates of return 
+		prices[][equity] ./= (1+adj/50);  // Same as $50 // adjust rates of return
+//		println(adj');
 /*
 		savemat(outdir+"xfile"~file_save~".dat",X);
 		savemat(outdir+"kfile"~file_save~".dat",K);
 		savemat(outdir+"assetsfile"~file_save~".dat",assets);
 		savemat(outdir+"pricesfile"~file_save~".dat",prices);
 */
-		crit_equil=norm((prices[][equity]-Pold)[:D::P-3],2)+agent_crit; //firm crit will be small due to while loop above
-		println("equil: ",crit_equil); //,"%c",{"old","new"},Pold~prices[][equity]);				// CF: println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",`onverge);
-		} while (crit_equil>equil_toler);
+		crit_equil=norm((prices[][equity]-Pold)[:D::P-3],2); //firm crit will be small due to while loop above
+		println("equil: ",crit_equil," ",agent_crit); //,"%c",{"old","new"},Pold~prices[][equity]);				// CF: println("equil_crit and conv flags",crit_equil,"  X=",X_converge,"   K=",K_converge,"  agent=",`onverge);
+		} while (crit_equil+agent_crit>equil_toler);
 
 	}
 
@@ -198,11 +199,11 @@ polisim() {
 	//find CarbPrice shadow value emissions
 	policy(54,0.0485,0,48,0);
 	scenario(2);
-	equil();   //"2","2_50"
+	equil(4);   //"2","2_50"
 	savemat(outdir+"shadow_"+sprint(CarbPrice)+".dat",X);
 
 	println(ctax~prices[][permits]~X);
-
+		
 	//CF ?? This seems to be a duplicate.  Will run on first foreach()?
 	policy(5.4,0,0,48,0);
 	scenario(2);
