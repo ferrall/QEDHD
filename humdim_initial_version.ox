@@ -20,7 +20,7 @@ initialize() {
   rho=new matrix[NP][1];
   assets=new matrix[NP][NG];
   cons=new matrix[NP][NG];
-  utils=new matrix[NP][NG];
+//  utils=new matrix[NP][NG];
   newassets=new matrix[NP][NG];
   income=new matrix[NP][1]; //first period income storage
   permit_transfers=new matrix[NP][1];

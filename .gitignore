@@ -24,5 +24,6 @@
 
 # Executables
 *.exe
-*.out
 *.app
+
+*.bak

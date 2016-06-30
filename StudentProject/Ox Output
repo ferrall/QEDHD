@@ -1,0 +1,71 @@
+--------------- Ox at 18:17:10 on 10-Apr-2016 ---------------
+
+Ox Console version 7.10 (OS_X_64/U) (C) J.A. Doornik, 1994-2014
+This version may be used for academic research and teaching only
+
+
+----------------------------------------
+Final Project: ECON 354
+Students:
+MW Kim 
+Daniel Thompson 
+Matas Sriubiskis 
+Jeffrey Archer 
+Zachary Hervieux-Moore 
+----------------------------------------
+Checking Euler Values:
+Check PASSED
+
+Convergence value = 0
+
+Optimal asset demand:
+       2.3476
+       2.6547
+       2.9939
+       3.3662
+       3.7716
+       4.2088
+       4.6748
+       5.1638
+       5.6669
+       6.1704
+       6.6543
+       7.0907
+       7.4411
+       7.6528
+       7.6553
+       7.3549
+       6.6276
+       5.3111
+       3.1935
+
+Consumption:
+      0.11129
+      0.12907
+      0.14969
+      0.17360
+      0.20134
+      0.23350
+      0.27081
+      0.31407
+      0.36425
+      0.42244
+      0.48993
+      0.56820
+      0.65897
+      0.76425
+      0.88635
+       1.0280
+       1.1922
+       1.3826
+       1.6035
+
+Sum of demands:
+       100.00
+
+Return Rate: 1.24868
+
+Price: 0.402124
+
+Consumption graphed and saved as consumption.pdf
+Optimal Asset Demand graphed and saved as optAssetDemand.pdf
