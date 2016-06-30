@@ -3,12 +3,31 @@
 #import <maximize>
 #import "CGI"
 
-const decl beta=0.96, sigma=1.223, initial_a_endowment=3.0, T=20; //number of periods
+
+decl beta, sigma, Iwealth, T; //number of periods
 const decl dividend = 0.1;
-decl cons,price;
+decl cons,price,parlabs,parvals;
+
+setparam(nm,par,defv) {
+    decl loc= strfind(parlabs,nm);
+    par[0] = loc>-1 ? parvals[loc] : defv;
+    }
+
+setparameters() {
+    CGI::Initialize();
+	println("\n\n----------------------------------------");
+    [parlabs,parvals] = CGI::Parse();
+    println("%c",{"Value"},"%r",parlabs,parvals);
+	println("----------------------------------------");	
+    CGI::Finalize();
+    setparam("beta",&beta,0.96);
+    setparam("sigma",&sigma,1.223);
+    setparam("Iwealth",&Iwealth,3.0);
+    setparam("T",&T,20);
+    }
 
 agent_euler(sysval, solution) {
-	decl i,yt=<initial_a_endowment*1.04>,yt1=<>;
+	decl i,yt=matrix(Iwealth*1.04),yt1=<>;
 	decl asset = solution[:T-2];
 	 price=1+solution[T-1];   //hold asset returns constant over all t. (1XT)
 
@@ -36,28 +55,17 @@ agent_euler(sysval, solution) {
 	
 //Intro paragraph	
 header(){
-	println("\n\n----------------------------------------");
-	println("Final Project: ECON 354");
-	println("Students: ");
-	println("MW Kim 06035255");
-	println("Daniel Thompson 10025582");
-	println("Matas Sriubiskis 10093817");
-	println("Jeffrey Archer 06240434");
-	println("Zachary Hervieux-Moore 10006618");
-	println("----------------------------------------");	
 }
 
 main () {
 	// Asset vector is T-1 dimensions because we know the last stage has 0 demand
 	// since the agent has no bequest motive. Also, T time stages yields T-1 steps.
-		
+
+    setparameters();		
 	decl assetvec = constant(0.001,T-1,1), conval, euler;
 	decl return_rate = 1;
 	decl solution_vec = assetvec | return_rate;
-    CGI::Initialize();
-    CGI::Finalize();
 
-	header();
 	MaxControl(100000,-1);
 	conval = SolveNLE(agent_euler, &solution_vec);	  //solving for vector of optimal asset holding.
 	agent_euler(&euler, solution_vec);

@@ -39,7 +39,29 @@ CGI::GetVar(key) {
     }
 
 CGI::Parse() {
-	decl nm,eq,val;
-	fscan(post,"%T",&nm,"%t",&eq,"%T",&val);
-	// println(nm,"\n",eq,"\n",val);	
+    if (!isfile(post)) {
+        oxwarning("post data file not found.");
+        return {};
+        }
+	decl instr, loc,nms,vals, val;
+    nms = {}; vals = <>;
+    fscan(post,"%s",&instr);
+    do {
+        loc=strfind(instr,eq);
+        if (loc>0) {
+            nms |= instr[:loc-1];
+            instr = instr[loc:];
+            loc = strfind(instr,amp);
+            if ((loc>0)) {
+                sscan(instr[1:loc-1],"%g",&val);
+                instr = instr[loc+1:];
+                }
+            else {
+                sscan(instr[1:],"%g",&val);
+                instr = "";
+                }
+            vals |= val;
+            }
+        }  while (loc>0);
+    return {nms,vals};
 	}

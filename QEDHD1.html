@@ -1,0 +1,46 @@
+<HTML>
+<head><meta name="author" content="Christopher Ferrall">
+<link rel="stylesheet" type="text/css" href="css/doc.css"></link>
+<script type="text/x-mathjax-config"> MathJax.Hub.Config({tex2jax: {inlineMath: [["$","$"],["\\(","\\)"]]}});</script>
+<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><title>Team QEDHD</title></head>
+<BODY>
+<h1>Prototype Model Interface</h1>
+This simply runs the code submitted as the project for Econ 354 and returns the results.
+<form action="/cgi-bin/QEDHD1" method="POST">
+<table cellspacing="" cellpadding="2" border="0" width="" align="">
+<tr>
+  <td>T</td>
+  <td>=</td>
+  <td><input name="T" min="1" max="100" type="number" value="20"></td>
+</tr>
+<tr>
+  <td>$\beta$</td>
+  <td>=</td>
+  <td><input name="beta" min="0" max="1.0" type="number" step="any" value="0.96"></td>
+</tr>
+<tr>
+  <td>$\sigma$ </td>
+  <td>=</td>
+  <td><input name="sigma" type="number" value="1.223" min="1.0" max="20.0" step="any"></td>
+</tr>
+<tr>
+  <td>$Iwealth$</td>
+  <td>=</td>
+  <td><input name="Iwealth" type="number" value="3.0"  min="1.0" max="10.0" step="any"></td>
+</tr>
+<tr>
+  <td><input type="reset" value="Reset"></td>
+  <td></td>
+  <td><input type="submit" value="Submit"></td>
+</tr>
+</table>
+<H2>Notes</H2>
+<ul>
+  <li>This HTML form was created externally.  It shows that the Ox code to parse the data and to use it to set parameters of the model are working.</li>
+  <li>The next stage is to build into <span class="n">niqlow</span> the ability to create forms for model parameters and options for algorithms which are generated within the code in a <q>set up</q> mode and then used to solve the model in an <q>execution</q> mode.  The object-oriented nature of niqlow will help this.</li>
+  <li>The model itself must be adapted to the niqlow framework and more reliable methods for solving the model must be employed before interactive use can proceed.</li>
+</ul>
+
+</form>
+</BODY>
+</HTML>
