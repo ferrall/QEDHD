@@ -26,6 +26,8 @@ parameterize() {
     beta=.96;
 	rplus1 = 1.005;
     delta=.045;//Pizer value
+	del1inv = 1/(1-delta); //CF added
+	
     Ubar=10;
 
     sigma=1.2213;	 //Pizer value
@@ -250,4 +252,23 @@ calibprint() {
 		println(i,"  ",Omegat[i],"   ",Omega[i],"   ",cstate[i][],"     ",E[i],"     ",CumC[i],"     ",mextcost[i],"     ",E[i]*phi[i],"       ",L[i],"      ",double(sumr(pop[i][])),"      ",pop[i][0],"   ",K[i],"   ",U[i],"    ",GDP[i],"    ",cons[i][0],"   ",sumr(cons[i][].*pop[i][0]*(1E-6))[0][0],"   ",phi[i][0],"   ",theta[i][0],"   ",prices[i][0],"   ",prices[i][1],"   ",prices[i][2],"   ",prices[i][3],"   ",P[i][0],"   ",Pfirm[i][0],"   ",ctax[i][0],"   ",rentinc[i][0],"   ",permitinc[i],"   ",dividends[i],"   ",income[i],"   ",permit_transfers[i]);
 		}
 
-	
+
+policy(permits_issued,carbon_tax,percap,sp,firm_allocation) {
+	println("in policy ",permits_issued~carbon_tax~percap~sp~firm_allocation);
+
+	P[:sp-1]= CarbPrice;//set initial permits to be non-binding
+	if(permits_issued==CarbPrice) 
+		//println("load dollar shadow price file");
+		P[sp:] = loadmat(indir+"shadow_"+sprint(CarbPrice)+".dat")[sp:];
+	else
+		P[sp: ] = permits_issued;
+
+	if(percap==1)
+		P[sp:]=P[sp:]./sumr(pop[sp]).*sumr(pop[sp:]);  //per capita permits
+
+	ctax[]=0;//the carbon tax rate is zero for early periods
+	ctax[sp:]=carbon_tax;//set carbon tax for policy period
+	Pfirm=P.*firm_allocation;
+	}
+
+		

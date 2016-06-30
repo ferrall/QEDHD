@@ -1,77 +1,135 @@
-#include "humdim.oxh"
+﻿#include "humdim.oxh"
 
- //evaluate system of agent's euler equations
-invest_nl(sysval,capital) {
-	decl euler,surplus,kt;
-	decl sent=shape(capital,D::P-1,2);
-	decl capchoice=(K[0]~0)|sent;   //CF simplified
-
-	decl mpk=alpha.*Omega.*capchoice[][0].^(alpha-1).*L.^(1-alpha-theta).*(phi.*X).^(theta)+ones(D::P,1)-capchoice[][1];
-
-	decl discount=beta.*ones(D::P,1)./prices[][equity];
-
-	GDP=Omega.*capchoice[][0].^(alpha).*L.^(1-alpha-theta).*(phi.*X).^(theta);
-	prices[][lab]=(1-alpha-theta).*GDP./L;
-	prices[][res]=(theta).*GDP./X;
-
-	surplus=Omega.*capchoice[][0].^(alpha).*L.^(1-alpha-theta).*(phi.*X).^(theta)-prices[][lab].*L-prices[][res].*X+prices[][permits].*Pfirm+capchoice[][0];
-	dividends=surplus-lag0(capchoice[][0],-1)/(1-delta);//dividends per share from production in dollars
-	dividends[D::P-1] -= capchoice[][0][D::P-1][0]./(1-delta); //force firm to maintain capital stock.
-
-	//use .1 here - as long as it is not binding in equil it is fine...using exactly zero admits small neg values.
-	kt=(dividends[:D::P-2].<=0.1).*(dividends[:D::P-2]-0.1)+(dividends[:D::P-2].>0.1).*capchoice[1:][1]+(capchoice[1:][1].>0).*capchoice[1:][1];
-	euler=discount[:D::P-2].*mpk[1:][]-ones(D::P-1,1)./(1-delta);
-
-	if(print_equil==1)
-		println((0|euler)~(dividends)~capchoice~mpk~X);
-	sysval[0]=(euler|kt);
-	return !isnan(sysval[0]);
+Output(K,L,X) {
+	return Omega.*K.^(alpha) .* L.^(1-alpha-theta) .* (phi.*X).^theta; 
 	}
-
 Ecosts(E,T) {
 	return C1m *( xi[0]*E+  C6K*xi[1]/(xi[2]+1)*( ((T+E)/C6K).^(xi[2]+1)-(T/C6K).^(xi[2]+1)) );
 	}
-
 Mcosts(ET) {
 	return C1m*(xi[0]+xi[1]*(ET/C6K).^xi[2]);
 	}
+
+Inv::Production() {
+	myGDP = Output(myK,L,X);
+	mpk=  alpha*myGDP./myK + 1 - mySH;
+	dividends  = alpha*myGDP + prices[][permits].*Pfirm + myK;  //CF 
+	dividends  -= del1inv*lag0(myK,-1);		//dividends per share from production in dollars
+	dividends[D::Pm1] -= del1inv*myK[D::Pm1]; //CF:deleted redundant [][0]???  force firm to maintain capital stock.
+	}
 	
  //evaluate system of agent's euler equations
-extract_nl(sysval,sent_vals) {
-	decl i,mpr,revenue;
-	decl sent=shape(sent_vals,D::P,2);
-	decl extraction=exp(sent[][0]);			//constrain to be positive
-	decl Cumtemp=cumsum(lag0(extraction,1),1);
-	decl Cum_eps=cumsum(lag0(extraction+(C1m|zeros(D::P-1,1)),1),1);
-					  
-	//calculate the change in extraction costs for a small increase in extraction
-	decl costs= Ecosts(extraction,Cumtemp); 	//CF:  (1E-3)*xi[0]*extraction+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((Cumtemp+extraction)/6000).^(xi[2]+1)-((Cumtemp)/6000).^(xi[2]+1));
-	decl costs_eps=	Ecosts(extraction,Cum_eps);	// CF (1E-3)*xi[0]*extraction+(1E-3)*(xi[1]*6000/(xi[2]+1))*(((Cum_eps+extraction)/6000).^(xi[2]+1)-((Cum_eps)/6000).^(xi[2]+1));
+Inv::nl(sysval,capital) {
+	decl myT = idiv(rows(capital),2);
+	myK = K[0] |capital[:myT-1] | (myT<D::Pm1 ? K[myT+1:] : <>);
+	mySH =    0|capital[myT:]   | (myT<D::Pm1 ? SH[myT+1:]: <>); 
 
-	decl costinc=reversec(cumsum(reversec(costs_eps-costs),ones(D::P,1)*beta./reversec(prices[][equity])))./ C1m;
+	Inv::Production();
 
-	decl opp_cost=costinc;
-	//opp_cost is the current value of all future cost increases caused by a one unit change in extraction in that period
-
-	decl marg_rev=(theta.*Omega.*K.^alpha.*L.^(1-alpha-theta) .* (phi.*extraction).^(theta)./extraction) + 1/Z*extraction.*(theta.*(theta-1).*Omega.*K.^alpha.*L.^(1-alpha-theta).*(phi.*extraction).^(theta)./(extraction.^2));//mkt power - prices are endogenous
-	marg_rev+=sent[][1]-ctax;
+	//CF version of code below.  Not sure I understand
+	kt   = dividends[:myT-1]-kt_toler;
+	kt   = (kt.<=0.0) .? kt .: mySH[1:myT];
+	kt  += setbounds(mySH[1:myT],0.0,+.Inf);
 	
+	sysval[0] = beta*(mpk[1:myT]./prices[:myT-1][equity]) - del1inv;
+
+	if (print_equil==1)  println((0|sysval[0])~(dividends)~myK~mySH~mpk~X);
 	
-	mextcost = Mcosts(Cumtemp+extraction); //	mextcost=C1m*(xi[0]+xi[1].*((Cumtemp[][0]+extraction)/6000).^xi[2]);//marginal extraction cost
+	sysval[0] |= kt;
 	
-	decl euler=marg_rev-mextcost-1/Z*opp_cost;
-
-	decl kt=(extraction.>P).*(extraction-P).^2+(extraction.<P).*sent[][1].^2+(sent[][1].>0).*sent[][1].^2;
-
-	prices[][permits]=-sent[][1];
-
-	mpr=theta.*Omega.*K.^(alpha).*L.^(1-alpha-theta).*(phi.*X).^(theta)./X;
-	prices[][res]=mpr-prices[][permits]-ctax;
-	resmarkup=mpr-prices[][permits]-ctax-mextcost;
-	revenue=prices[][res].*extraction;
-	rentinc=(revenue-costs)*(1E12);//total rent income in dollars to pass to agents' problem
-	sysval[0]=euler|kt;
-	if(print_equil==1)
-		println("resource sector",extraction~prices[][res]~P~prices[][permits]~rentinc);
 	return !isnan(sysval[0]);
 	}
+
+ //evaluate system of agent's euler equations
+Ext::nl(sysval,sent_vals) {
+	decl myT = idiv(rows(sent_vals),2);
+
+	myX    = exp(sent_vals[:myT-1]) | (myT<D::P ? X[myT:] : <>);			//constrain to be positive
+	xprice = sent_vals[myT:] | (myT<D::P ? -prices[myT:][permits] : <>);
+
+	decl Cumtemp=cumsum(lag0(myX,1),1),
+		 Cum_eps=cumsum(lag0(myX+(C1m|zeros(D::Pm1,1)),1),1),					  
+		//calculate the change in extraction costs for a small increase in extraction
+		costs= Ecosts(myX,Cumtemp),
+		costs_eps=	Ecosts(myX,Cum_eps),
+        opp_cost=reversec(cumsum(reversec(costs_eps-costs),beta./reversec(prices[][equity])))./ C1m;	//opp_cost is the current value of all future cost increases caused by a one unit change in extraction in that period
+
+	myout = Output(K,L,myX);
+	
+	decl marg_rev = theta.*myout./myX.*(1 + (1/Z)*(theta-1) ) + xprice-ctax;
+
+	mextcost = Mcosts(Cumtemp+myX); 
+	
+	sysval[0] = (marg_rev-mextcost-(1/Z)*opp_cost)[:myT-1];
+
+	kt = (myX - P)[:myT-1];
+	kt = (kt.>0.0) .? sqr(kt) .:  sqr(xprice[:myT-1]);	
+	kt += sqr( setbounds(xprice[:myT-1],0.0,.Inf) );
+
+	sysval[0] |= kt;
+	
+//	if(print_equil==1)	println("resource sector",extraction~prices[][res]~P~prices[][permits]~rentinc);
+		
+	return !isnan(sysval[0]);
+	}
+
+//évolution du modèle climatique étant donné les émissions.
+newclimate(emissions)	{
+	//use global D::Px6 matrix of climate values and receive a D::Px1 vector of emissions levels
+	//fill a new D::Px6 matrix of updated climate values.
+	decl i;
+	//cstate-=<596.4,705,19200,0,0,0>;//convert to deviations from P.I. normals
+	for(i=1;i<D::P;++i)	{
+		cstate[i][atm1]=emissions[i-1]+deltam[atm1][atm1]*cstate[i-1][atm1]+deltam[atm2][atm1]*cstate[i-1][atm2];
+		cstate[i][atm2]=               deltam[atm2][atm2]*cstate[i-1][atm2]+deltam[atm1][atm2]*cstate[i-1][atm1]+deltam[atm3][atm2]*cstate[i-1][atm3];
+		cstate[i][atm3]=               deltam[atm3][atm3]*cstate[i-1][atm3]+deltam[atm2][atm3]*cstate[i-1][atm2];
+		//cstate+=<596.4,705,19200,0,0,0>;  //transform back to levels
+		//c_new=c_new;//
+		cstate[i][stemp]=t4*cstate[i-1][otemp]+t1*cstate[i-1][stemp]+t2*log((cstate[i-1][atm1])/596.4);
+		cstate[i][otemp]=cstate[i-1][otemp]+t3*(cstate[i-1][stemp]-cstate[i-1][otemp]);
+		}
+	}
+
+FirmEuler(NT) {
+
+	decl lagXK, Kconv, Xconv,firm_crit, extstart, capstart, capchoice, extchoice;	
+
+	extstart = log(X[:NT-1]) | -prices[:NT-1][permits];
+	
+	if (NT>1) capstart = K[1:NT-1] | SH[1:NT-1]; 	//capital and shadow values
+
+	Kconv = Xconv = FALSE;
+	
+	do {//solve extraction and production given rate of return
+		lagXK = X|K;
+		newclimate(E=X);		//send sequence of emissions to temp routine
+
+		//update climate damages
+		Omega = Omegat./(d0+cstate[][stemp].*(b1 + b2*cstate[][stemp]));  //CF: simplified
+
+		if (!Xconv) extchoice = extstart;
+		Xconv = !SolveNLE(Ext::nl,&extchoice,-1);			//println("Calculated Res Ext, given K with convergence crit ", SolveNLE(extract_nl,&extstart,-1));		
+
+		X[:NT-1]   = exp(extchoice[:NT-1]);
+		prices[:NT-1][permits] = -extchoice[NT: ];
+
+		if (NT>1) {
+			if (!Kconv) capchoice = capstart;
+			Kconv=!SolveNLE(Inv::nl,&capchoice,-1);	//println("Calculated K, given res ext with convergence crit ",K_converge=SolveNLE(invest_nl,&capstart,-1));
+			K[1:NT-1] = capchoice[:NT-2] ;
+			SH[1:NT-1] = capchoice[NT-1:];
+			}
+			
+		GDP = Output(K,L,X);
+		prices[][res]= theta.*GDP./X -prices[][permits]-ctax;
+		//		resmarkup=prices[][res]-mextcost;
+		
+		rentinc= prices[][res].*X - 1E12*Ecosts(X,cumsum(lag0(X,1),1)) ;//total rent income in dollars to pass to agents' problem		
+		prices[][lab]= (1-alpha-theta).*GDP./L;
+
+		firm_crit = norm( (X|K)- lagXK,2);  				//CF almost same criterion firm_crit=meanc(meanr(((K~X)-(kold~xold))).^2); //mean square deviation
+
+		if (firm_crit<firm_toler) println("Firm Converged"); 	//Convergence?, ",,"   ",X_converge,"   ",K_converge);
+		} while(firm_crit>firm_toler);
+	}
+	
